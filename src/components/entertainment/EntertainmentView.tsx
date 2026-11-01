@@ -535,7 +535,7 @@ export const EntertainmentView: React.FC = () => {
 
             if (isWon) {
               const reward = Math.floor(amount * mult);
-              winnerList.push(`${displayName || 'Bé'} (+${reward} Xu)`);
+              winnerList.push(`${displayName || 'Bé Mầm Non'} (+${reward} Xu)`);
             }
           });
         } catch (err) {
@@ -545,23 +545,43 @@ export const EntertainmentView: React.FC = () => {
         const outcome = total >= 11 ? 'Tài' : 'Xỉu';
         const parity = total % 2 === 0 ? 'Chẵn' : 'Lẻ';
         const isTriple = (d1 === d2 && d2 === d3);
+
+        const recentTrend = taiXiuHistory.slice(0, 10).map(h => (h.total && h.total >= 11 ? 'T' : 'X')).reverse();
+        recentTrend.push(outcome === 'Tài' ? 'T' : 'X');
+        const countTai = recentTrend.filter(t => t === 'T').length;
+        const countXiu = recentTrend.filter(t => t === 'X').length;
+        const totalCount = countTai + countXiu || 1;
+        const pctTai = Math.round((countTai / totalCount) * 100);
+        const pctXiu = 100 - pctTai;
         
-        const winnersText = winnerList.length > 0 
-          ? `🎉 CHÚC MỪNG CÁC BÉ ĐÃ THẮNG: ${winnerList.join(', ')}`
-          : '💬 Tiếc quá, phiên này chưa có bé nào trúng thưởng rồi... Cố gắng phiên sau nhé ♡';
+        const statsText = winnerList.length > 0 
+          ? `📊 Thống kê phiên: Có ${winnerList.length} bé thắng cược và các bé chưa trúng thưởng trong phiên này. Hệ thống đã tự động cộng thưởng cho các bé thắng!`
+          : '📊 Thống kê phiên: Phiên này chưa có bé nào trúng thưởng (Có thắng có thua). Cố gắng phiên sau nhé ♡';
 
         await addDoc(collection(db, 'liveChatMessages'), {
           senderId: 'bot-may-man',
           senderName: '🤖 Bot May Mắn',
           senderAvatar: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=100&auto=format&fit=crop&q=80',
-          text: `🎲 KẾT QUẢ PHIÊN: [${d1}] [${d2}] [${d3}] = ${total} điểm [${outcome.toUpperCase()} - ${parity.toUpperCase()}]${isTriple ? ' 🔥 BÃO TAM HOA (X3 THƯỞNG)!' : ''}\n\n${winnersText}\n\n✨ Hệ thống đã tự động cộng Xu vào ví cho các bé thắng cuộc!`,
+          text: `🎲 KẾT QUẢ PHIÊN: [${d1}] [${d2}] [${d3}] = ${total} điểm [${outcome.toUpperCase()} - ${parity.toUpperCase()}]${isTriple ? ' 🔥 BÃO TAM HOA (X3 THƯỞNG)!' : ''}\n\n${statsText}`,
           isBot: true,
+          chartSummary: {
+            dice: [d1, d2, d3],
+            total,
+            outcome,
+            parity,
+            isTriple,
+            recentTrend,
+            countTai,
+            countXiu,
+            pctTai,
+            pctXiu
+          },
           createdAt: new Date().toISOString()
         });
 
         await addDoc(collection(db, 'gameResults'), {
           gameType: 'taixiu',
-          playerName: 'Sòng Bạc Mầm Non',
+          playerName: profile?.displayName || 'Sòng Bạc Mầm Non',
           result: [`${d1}`, `${d2}`, `${d3}`],
           total,
           createdAt: new Date().toISOString()

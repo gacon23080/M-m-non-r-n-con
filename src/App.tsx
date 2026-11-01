@@ -85,8 +85,8 @@ const MainAppInner: React.FC = () => {
   const { profile, isAdmin, currentUser, loading } = useAuth();
   const [showEntrance, setShowEntrance] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<NavTab>('home');
-  const [characters, setCharacters] = useState<Character[]>(INITIAL_CHARACTERS);
-  const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [tags, setTags] = useState<string[]>(DEFAULT_TAGS);
   const [teacherData, setTeacherData] = useState(DEFAULT_TEACHER);
@@ -114,7 +114,7 @@ const MainAppInner: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Subscribe to Teacher Data from Firestore
+  // Subscribe to Teacher Data from Firestore (Strict real-time sync for all visitors)
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'systemSettings', 'teacher'), (snapshot) => {
       if (snapshot.exists()) {
@@ -126,6 +126,15 @@ const MainAppInner: React.FC = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  const handleUpdateTeacherData = async (newData: any) => {
+    setTeacherData(newData);
+    try {
+      await setDoc(doc(db, 'systemSettings', 'teacher'), newData, { merge: true });
+    } catch (err) {
+      console.warn('Failed to update teacher data in Firestore:', err);
+    }
+  };
 
   const handleAddCategory = async (cat: string) => {
     const trimmed = cat.trim();
@@ -177,81 +186,49 @@ const MainAppInner: React.FC = () => {
     }
   };
   
-  // Subscribe to Characters with Auto-Seed & Clean Deletion
+  // Subscribe to Characters (Strict: Never auto-seed if deleted or empty, 0 items stay 0)
   useEffect(() => {
     const q = query(collection(db, 'characters'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      if (!snapshot.empty) {
-        const c = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Character));
-        setCharacters(c);
-      } else {
-        if (!localStorage.getItem('mnrc_characters_seeded')) {
-          localStorage.setItem('mnrc_characters_seeded', 'true');
-          try {
-            for (const char of INITIAL_CHARACTERS) {
-              await setDoc(doc(db, 'characters', char.id), char);
-            }
-          } catch (err) {
-            console.warn('Could not seed initial characters:', err);
-            setCharacters(INITIAL_CHARACTERS);
-          }
-        } else {
-          setCharacters([]);
-        }
-      }
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const c = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Character));
+      setCharacters(c);
     }, (err) => {
       console.warn('characters subscription note:', err);
     });
     return () => unsubscribe();
   }, []);
 
-  // Subscribe to Announcements with Auto-Seed & Clean Deletion
+  // Subscribe to Announcements (Strict: Never auto-seed if deleted or empty, 0 items stay 0)
   useEffect(() => {
     const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      if (!snapshot.empty) {
-        const a = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement));
-        
-        // Auto-notify for new announcement
-        if (a.length > 0 && announcements.length > 0) {
-          const newest = a[0];
-          const lastSeenAnn = localStorage.getItem('mnrc_last_announcement_id');
-          if (newest.id !== lastSeenAnn && newest.id !== announcements[0]?.id) {
-             setNotifications(prev => [
-               {
-                 id: `ann-notif-${Date.now()}`,
-                 userId: currentUser?.uid || 'guest',
-                 type: 'announcement',
-                 title: '📢 Thông báo mới từ Cô Giáo!',
-                 message: newest.title,
-                 isRead: false,
-                 createdAt: 'Vừa xong'
-               },
-               ...prev
-             ]);
-             soundManager.playMagicChime();
-             localStorage.setItem('mnrc_last_announcement_id', newest.id);
-          }
-        } else if (a.length > 0) {
-           localStorage.setItem('mnrc_last_announcement_id', a[0].id);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const a = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement));
+      
+      // Auto-notify for new announcement
+      if (a.length > 0 && announcements.length > 0) {
+        const newest = a[0];
+        const lastSeenAnn = localStorage.getItem('mnrc_last_announcement_id');
+        if (newest.id !== lastSeenAnn && newest.id !== announcements[0]?.id) {
+           setNotifications(prev => [
+             {
+               id: `ann-notif-${Date.now()}`,
+               userId: currentUser?.uid || 'guest',
+               type: 'announcement',
+               title: '📢 Thông báo mới từ Cô Giáo!',
+               message: newest.title,
+               isRead: false,
+               createdAt: 'Vừa xong'
+             },
+             ...prev
+           ]);
+           soundManager.playMagicChime();
+           localStorage.setItem('mnrc_last_announcement_id', newest.id);
         }
-        
-        setAnnouncements(a);
-      } else {
-        if (!localStorage.getItem('mnrc_announcements_seeded')) {
-          localStorage.setItem('mnrc_announcements_seeded', 'true');
-          try {
-            for (const ann of INITIAL_ANNOUNCEMENTS) {
-              await setDoc(doc(db, 'announcements', ann.id), ann);
-            }
-          } catch (err) {
-            console.warn('Could not seed initial announcements:', err);
-            setAnnouncements(INITIAL_ANNOUNCEMENTS);
-          }
-        } else {
-          setAnnouncements([]);
-        }
+      } else if (a.length > 0) {
+         localStorage.setItem('mnrc_last_announcement_id', a[0].id);
       }
+      
+      setAnnouncements(a);
     }, (err) => {
       console.warn('announcements subscription note:', err);
     });
@@ -303,10 +280,8 @@ const MainAppInner: React.FC = () => {
     const skip = localStorage.getItem('mnrc_skip_entrance');
     if (skip === 'true' && profile) {
       setShowEntrance(false);
-      // Auto start ambient audio
-      startPlayback();
     }
-  }, [profile, startPlayback]);
+  }, [profile]);
 
   if (loading) {
     return (
@@ -574,6 +549,8 @@ const MainAppInner: React.FC = () => {
 
                       <div className="lg:col-span-4 order-3">
                         <HomeTeacherCorner
+                          teacherData={teacherData}
+                          onUpdateTeacherData={handleUpdateTeacherData}
                           onExploreLibrary={() => setActiveTab('library')}
                           onOpenInbox={() => setActiveTab('inbox')}
                           onAddNewCharacter={isAdmin ? handleOpenAddCharacter : undefined}
@@ -636,6 +613,8 @@ const MainAppInner: React.FC = () => {
                       announcements={announcements}
                       categories={categories}
                       tags={tags}
+                      teacherData={teacherData}
+                      onUpdateTeacherData={handleUpdateTeacherData}
                       onAddCategory={handleAddCategory}
                       onDeleteCategory={handleDeleteCategory}
                       onAddTag={handleAddTag}

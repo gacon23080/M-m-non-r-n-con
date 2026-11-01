@@ -65,7 +65,7 @@ export const HomeBulletinBoard: React.FC<HomeBulletinBoardProps> = ({
     'Original Characters'
   ];
 
-  const categories = customCategories && customCategories.length > 0 ? customCategories : defaultCategories;
+  const categories = customCategories !== undefined ? customCategories : defaultCategories;
 
   const filteredCharacters = characters.filter((char) => {
     const matchSearch = 

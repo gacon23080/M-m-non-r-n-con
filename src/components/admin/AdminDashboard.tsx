@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
   Users, 
@@ -32,6 +32,8 @@ interface AdminDashboardProps {
   announcements: Announcement[];
   categories?: string[];
   tags?: string[];
+  teacherData?: any;
+  onUpdateTeacherData?: (data: any) => void;
   onAddCategory?: (category: string) => void;
   onDeleteCategory?: (category: string) => void;
   onAddTag?: (tag: string) => void;
@@ -49,6 +51,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   announcements,
   categories: customCategories = [],
   tags: customTags = [],
+  teacherData: propTeacherData,
+  onUpdateTeacherData,
   onAddCategory,
   onDeleteCategory,
   onAddTag,
@@ -62,8 +66,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const { profile } = useAuth();
   const { playlist, addTrackToPlaylist, removeTrack, currentTrack, isPlaying, togglePlay, selectTrack } = useMusic();
-  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'characters' | 'announcements' | 'categories_tags' | 'music'>('overview');
+  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'characters' | 'announcements' | 'categories_tags' | 'music' | 'teacher_info'>('overview');
   
+  // Teacher / School Information Form State
+  const [tName, setTName] = useState<string>(propTeacherData?.name || 'Cô Giáo Rắn Con');
+  const [tTagline, setTTagline] = useState<string>(propTeacherData?.tagline || 'Chủ nhiệm lớp Mầm Non Rắn Con & Người kể chuyện AI Studio');
+  const [tBio, setTBio] = useState<string>(propTeacherData?.bio || 'Không gian sáng tạo mộng mơ cho các tác giả Google AI Studio.');
+  const [tQuote, setTQuote] = useState<string>(propTeacherData?.quote || 'Chào đón các bạn nhỏ ghé chơi! Ghé thăm Facebook và Discord để cùng trò chuyện và sáng tạo nhân vật nhé ♡');
+  const [tAvatar, setTAvatar] = useState<string>(propTeacherData?.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80');
+  const [tFb, setTFb] = useState<string>(propTeacherData?.facebookUrl || 'https://facebook.com/');
+  const [tDiscord, setTDiscord] = useState<string>(propTeacherData?.discordUrl || 'https://discord.gg/');
+  const [tAiStudio, setTAiStudio] = useState<string>(propTeacherData?.aiStudioUrl || 'https://aistudio.google.com/');
+  const [teacherSaveStatus, setTeacherSaveStatus] = useState<string>('');
+
+  // Sync state if prop changes
+  useEffect(() => {
+    if (propTeacherData) {
+      if (propTeacherData.name) setTName(propTeacherData.name);
+      if (propTeacherData.tagline) setTTagline(propTeacherData.tagline);
+      if (propTeacherData.bio) setTBio(propTeacherData.bio);
+      if (propTeacherData.quote) setTQuote(propTeacherData.quote);
+      if (propTeacherData.avatarUrl) setTAvatar(propTeacherData.avatarUrl);
+      if (propTeacherData.facebookUrl) setTFb(propTeacherData.facebookUrl);
+      if (propTeacherData.discordUrl) setTDiscord(propTeacherData.discordUrl);
+      if (propTeacherData.aiStudioUrl) setTAiStudio(propTeacherData.aiStudioUrl);
+    }
+  }, [propTeacherData]);
+
   // Category & Tag Form State
   const [newCatInput, setNewCatInput] = useState<string>('');
   const [newTagInput, setNewTagInput] = useState<string>('');
@@ -113,7 +142,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     'Khác'
   ];
 
-  const categories = customCategories.length > 0 ? customCategories : defaultCategories;
+  const categories = customCategories !== undefined ? customCategories : defaultCategories;
 
   // Stats calculation
   const totalLikes = characters.reduce((acc, c) => acc + c.likesCount, 0);
@@ -335,6 +364,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         >
           <Music className="w-3.5 h-3.5" />
           <span>Quản Lý Playlist Nhạc ({playlist.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveAdminTab('teacher_info')}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer font-heading flex items-center gap-1.5 ${
+            activeAdminTab === 'teacher_info'
+              ? 'bg-[#A594D6] text-white shadow-xs'
+              : 'bg-white text-[#62566F] border border-[#E8DFF3] hover:bg-white/80'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Thông Tin Trường & Cô Giáo</span>
         </button>
       </div>
 
@@ -923,6 +963,175 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* TEACHER & SCHOOL INFO TAB */}
+      {activeAdminTab === 'teacher_info' && (
+        <div className="glass-panel rounded-3xl p-6 bg-white/95 border border-white shadow-sm space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-black/5">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#8E75B2]" />
+              <h2 className="font-heading font-bold text-lg text-[#3F334D]">
+                Thông Tin Trường & Cô Giáo (Đồng bộ tức thì cho người xem)
+              </h2>
+            </div>
+            {teacherSaveStatus && (
+              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                {teacherSaveStatus}
+              </span>
+            )}
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              soundManager.playMagicChime();
+              const updated = {
+                name: tName.trim() || 'Cô Giáo Rắn Con',
+                tagline: tTagline.trim(),
+                bio: tBio.trim(),
+                quote: tQuote.trim(),
+                avatarUrl: tAvatar.trim(),
+                facebookUrl: tFb.trim(),
+                discordUrl: tDiscord.trim(),
+                aiStudioUrl: tAiStudio.trim()
+              };
+              if (onUpdateTeacherData) {
+                onUpdateTeacherData(updated);
+              }
+              setTeacherSaveStatus('Đã lưu thành công! Người truy cập sẽ thấy ngay lập tức ♡');
+              setTimeout(() => setTeacherSaveStatus(''), 4000);
+            }}
+            className="space-y-4 text-xs"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-bold text-[#4A3B53] mb-1">Tên Cô Giáo / Tên Trường (*):</label>
+                <input
+                  type="text"
+                  value={tName}
+                  onChange={(e) => setTName(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#4A3B53] mb-1">Chức danh / Câu đề từ:</label>
+                <input
+                  type="text"
+                  value={tTagline}
+                  onChange={(e) => setTTagline(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-[#4A3B53] mb-1">Giới thiệu lớp học & cô giáo:</label>
+              <textarea
+                rows={3}
+                value={tBio}
+                onChange={(e) => setTBio(e.target.value)}
+                className="w-full p-3 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-[#4A3B53] mb-1">Câu châm ngôn / Trích dẫn thơ mộng:</label>
+              <input
+                type="text"
+                value={tQuote}
+                onChange={(e) => setTQuote(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+              />
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[#FFF8FA] border border-[#F0D5E5] space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-[#4A3B53]">Ảnh đại diện Cô Giáo (Avatar):</label>
+                <label className="text-[10px] bg-[#E9DCF8] hover:bg-[#D8C7F0] text-[#4A3B53] font-bold px-3 py-1 rounded-lg cursor-pointer transition-colors">
+                  <span>📁 Tải ảnh từ máy</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          if (typeof reader.result === 'string') {
+                            setTAvatar(reader.result);
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+              <input
+                type="text"
+                value={tAvatar}
+                onChange={(e) => setTAvatar(e.target.value)}
+                placeholder="https://... hoặc đã tải từ máy"
+                className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+              />
+              {tAvatar && (
+                <div className="flex items-center gap-2 pt-1">
+                  <img src={tAvatar} alt="Preview" className="w-10 h-10 rounded-full object-cover border border-white shadow-xs" />
+                  <span className="text-[11px] text-[#7A6C88] italic">Xem trước ảnh đại diện</span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+              <div>
+                <label className="block font-bold text-[#4A3B53] mb-1">Link Facebook Lớp:</label>
+                <input
+                  type="url"
+                  value={tFb}
+                  onChange={(e) => setTFb(e.target.value)}
+                  placeholder="https://facebook.com/..."
+                  className="w-full px-3 py-2 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#4A3B53] mb-1">Link Discord:</label>
+                <input
+                  type="url"
+                  value={tDiscord}
+                  onChange={(e) => setTDiscord(e.target.value)}
+                  placeholder="https://discord.gg/..."
+                  className="w-full px-3 py-2 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#4A3B53] mb-1">Link Google AI Studio:</label>
+                <input
+                  type="url"
+                  value={tAiStudio}
+                  onChange={(e) => setTAiStudio(e.target.value)}
+                  placeholder="https://aistudio.google.com/..."
+                  className="w-full px-3 py-2 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-black/5 flex justify-end">
+              <button
+                type="submit"
+                className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#8E75B2] to-[#E2799F] text-white font-bold text-xs shadow-md hover:shadow-lg transition-all cursor-pointer font-heading flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>LƯU THAY ĐỔI THÔNG TIN LỚP HỌC</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

@@ -23,7 +23,7 @@ export const CharacterEditModal: React.FC<CharacterEditModalProps> = ({
 }) => {
   const isEditing = Boolean(character);
 
-  const categories: CharacterCategory[] = customCategories && customCategories.length > 0 
+  const categories: CharacterCategory[] = customCategories !== undefined 
     ? (customCategories as CharacterCategory[]) 
     : [
       'Hiện đại',

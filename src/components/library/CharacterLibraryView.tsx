@@ -51,7 +51,7 @@ export const CharacterLibraryView: React.FC<CharacterLibraryViewProps> = ({
     'Khác'
   ];
 
-  const categories = customCategories && customCategories.length > 0 ? customCategories : defaultCategories;
+  const categories = customCategories !== undefined ? customCategories : defaultCategories;
 
   const defaultTags = [
     '#Tsundere',
@@ -69,7 +69,7 @@ export const CharacterLibraryView: React.FC<CharacterLibraryViewProps> = ({
     '#CatBoy'
   ];
 
-  const allTags = customTags && customTags.length > 0 ? customTags : defaultTags;
+  const allTags = customTags !== undefined ? customTags : defaultTags;
 
   const handleTagToggle = (tag: string) => {
     soundManager.playBoop();

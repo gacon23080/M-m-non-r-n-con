@@ -168,7 +168,7 @@ export const MusicRoomView: React.FC = () => {
             {/* Vinyl record spinning */}
             <div
               className={`w-full h-full rounded-full bg-slate-900 border-8 border-slate-800 shadow-2xl flex items-center justify-center relative overflow-hidden transition-all ${
-                isPlaying ? 'animate-spin' : ''
+                isPlaying && currentTrack ? 'animate-spin' : ''
               }`}
               style={{ animationDuration: '6s' }}
             >
@@ -177,8 +177,8 @@ export const MusicRoomView: React.FC = () => {
               <div className="absolute inset-12 rounded-full border border-slate-700/60" />
               
               <img
-                src={currentTrack.coverUrl}
-                alt={currentTrack.title}
+                src={currentTrack?.coverUrl || "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300&auto=format&fit=crop&q=80"}
+                alt={currentTrack?.title || "Phát nhạc"}
                 className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md"
               />
             </div>
@@ -187,7 +187,7 @@ export const MusicRoomView: React.FC = () => {
           <div className="w-full mt-2">
             <div className="flex items-center justify-center gap-2">
               <span className="text-[10px] bg-white/80 text-[#4A3C56] font-bold px-3 py-1 rounded-full border border-white">
-                {currentTrack.category}
+                {currentTrack?.category || 'Lớp học'}
               </span>
               {currentYtId && (
                 <span className="text-[10px] bg-red-100 text-red-600 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -197,9 +197,11 @@ export const MusicRoomView: React.FC = () => {
             </div>
 
             <h3 className="font-heading font-bold text-lg text-[#4A3C56] mt-2 mb-0.5 truncate">
-              {currentTrack.title}
+              {currentTrack?.title || 'Chưa có bản nhạc nào'}
             </h3>
-            <p className="text-xs text-[#827290] mb-4 font-luxury italic">{currentTrack.artist}</p>
+            <p className="text-xs text-[#827290] mb-4 font-luxury italic">
+              {currentTrack?.artist || 'Danh sách phát hiện đang trống'}
+            </p>
 
             {/* Progress Bar */}
             <div className="w-full h-1.5 bg-[#EAE2F8] rounded-full overflow-hidden mb-4">
@@ -213,7 +215,8 @@ export const MusicRoomView: React.FC = () => {
             <div className="flex items-center justify-center gap-4 mb-4">
               <button
                 onClick={togglePlay}
-                className="p-3.5 rounded-full bg-gradient-to-r from-[#8E75B2] to-[#E2799F] text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+                disabled={playlist.length === 0}
+                className="p-3.5 rounded-full bg-gradient-to-r from-[#8E75B2] to-[#E2799F] text-white shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-40"
                 title={isPlaying ? "Tạm dừng" : "Phát"}
               >
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
@@ -262,97 +265,105 @@ export const MusicRoomView: React.FC = () => {
 
             {/* Tracks List */}
             <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-              {filteredPlaylist.map((track) => {
-                const isSelected = track.id === currentTrack.id;
-                const hasYt = track.youtubeUrl || track.youtubeId;
-                return (
-                  <div
-                    key={track.id}
-                    onClick={() => selectTrack(track)}
-                    className={`p-3 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all ${
-                      isSelected
-                        ? 'bg-gradient-to-r from-[#FAF4FE] to-[#FFF7EF] border border-[#D2C8F2] shadow-xs'
-                        : 'bg-white/50 hover:bg-white/80 border border-white/60'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative">
-                        <img
-                          src={track.coverUrl}
-                          alt={track.title}
-                          className="w-10 h-10 rounded-xl object-cover border border-white shadow-xs"
-                        />
-                        {isSelected && isPlaying && (
-                          <div className="absolute inset-0 bg-black/30 rounded-xl flex items-center justify-center">
-                            <span className="text-white text-xs animate-ping">♫</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="min-w-0">
-                        <div className="font-heading font-bold text-sm text-[#4A3C56] truncate flex items-center gap-1.5">
-                          <span>{track.title}</span>
-                          {hasYt && (
-                            <span className="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.2 rounded font-bold">
-                              YouTube
-                            </span>
+              {filteredPlaylist.length === 0 ? (
+                <div className="p-8 text-center bg-white/40 rounded-2xl border border-white text-xs text-[#827290] font-luxury italic">
+                  Không có bản nhạc nào trong danh mục này. Cô giáo có thể nhấn &quot;Thêm nhạc YouTube&quot; để bổ sung bài hát mới!
+                </div>
+              ) : (
+                <>
+                  {filteredPlaylist.map((track) => {
+                    const isSelected = currentTrack?.id === track.id;
+                    const hasYt = track.youtubeUrl || track.youtubeId;
+                  return (
+                    <div
+                      key={track.id}
+                      onClick={() => selectTrack(track)}
+                      className={`p-3 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-[#FAF4FE] to-[#FFF7EF] border border-[#D2C8F2] shadow-xs'
+                          : 'bg-white/50 hover:bg-white/80 border border-white/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative">
+                          <img
+                            src={track.coverUrl}
+                            alt={track.title}
+                            className="w-10 h-10 rounded-xl object-cover border border-white shadow-xs"
+                          />
+                          {isSelected && isPlaying && (
+                            <div className="absolute inset-0 bg-black/30 rounded-xl flex items-center justify-center">
+                              <span className="text-white text-xs animate-ping">♫</span>
+                            </div>
                           )}
                         </div>
-                        <div className="text-[11px] text-[#827290] font-luxury italic truncate">
-                          {track.artist} • {track.category}
+
+                        <div className="min-w-0">
+                          <div className="font-heading font-bold text-sm text-[#4A3C56] truncate flex items-center gap-1.5">
+                            <span>{track.title}</span>
+                            {hasYt && (
+                              <span className="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.2 rounded font-bold">
+                                YouTube
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-[#827290] font-luxury italic truncate">
+                            {track.artist} • {track.category}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-[#8E75B2] font-caption">
-                        {track.duration}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-[#8E75B2] font-caption">
+                          {track.duration}
+                        </span>
 
-                      {/* Admin edit & delete track buttons */}
-                      {isAdmin && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditTrack(track);
-                            }}
-                            className="p-1.5 rounded-full hover:bg-white text-[#8E75B2] transition-colors cursor-pointer"
-                            title="Cô giáo sửa bài này"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={(e) => handleDeleteTrack(track.id, e)}
-                            className="p-1.5 rounded-full hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors cursor-pointer"
-                            title="Cô giáo xóa bài này"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isSelected) {
-                            togglePlay();
-                          } else {
-                            selectTrack(track);
-                          }
-                        }}
-                        className="p-1.5 rounded-full bg-[#EAE2F8] hover:bg-[#DCD0F4] text-[#4A3C56] cursor-pointer border border-white shadow-xs"
-                      >
-                        {isSelected && isPlaying ? (
-                          <Pause className="w-3.5 h-3.5" />
-                        ) : (
-                          <Play className="w-3.5 h-3.5 ml-0.5" />
+                        {/* Admin edit & delete track buttons */}
+                        {isAdmin && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditTrack(track);
+                              }}
+                              className="p-1.5 rounded-full hover:bg-white text-[#8E75B2] transition-colors cursor-pointer"
+                              title="Cô giáo sửa bài này"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => handleDeleteTrack(track.id, e)}
+                              className="p-1.5 rounded-full hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors cursor-pointer"
+                              title="Cô giáo xóa bài này"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         )}
-                      </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isSelected) {
+                              togglePlay();
+                            } else {
+                              selectTrack(track);
+                            }
+                          }}
+                          className="p-1.5 rounded-full bg-[#EAE2F8] hover:bg-[#DCD0F4] text-[#4A3C56] cursor-pointer border border-white shadow-xs"
+                        >
+                          {isSelected && isPlaying ? (
+                            <Pause className="w-3.5 h-3.5" />
+                          ) : (
+                            <Play className="w-3.5 h-3.5 ml-0.5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+                </>
+              )}
             </div>
           </div>
 

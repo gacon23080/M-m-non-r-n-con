@@ -11,44 +11,39 @@ interface HomeTeacherCornerProps {
   onExploreLibrary: () => void;
   onOpenInbox: () => void;
   onAddNewCharacter?: () => void;
+  teacherData?: TeacherData;
+  onUpdateTeacherData?: (data: TeacherData) => void;
 }
 
 export const HomeTeacherCorner: React.FC<HomeTeacherCornerProps> = ({
   onExploreLibrary,
   onOpenInbox,
-  onAddNewCharacter
+  onAddNewCharacter,
+  teacherData: propTeacherData,
+  onUpdateTeacherData
 }) => {
   const { isAdmin } = useAuth();
 
-  // Load teacher data from localStorage or initial
-  const [teacherData, setTeacherData] = useState<TeacherData>(() => {
-    const saved = localStorage.getItem('mnrc_teacher_data');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        // fallback
-      }
-    }
-    return {
-      name: TEACHER_PROFILE.name,
-      tagline: TEACHER_PROFILE.tagline,
-      bio: TEACHER_PROFILE.bio,
-      avatarUrl: TEACHER_PROFILE.avatarUrl,
-      quote: TEACHER_PROFILE.quote,
-      facebookUrl: 'https://facebook.com/',
-      discordUrl: 'https://discord.gg/',
-      aiStudioUrl: 'https://aistudio.google.com/'
-    };
-  });
+  // Internal state fallback if not supplied by props
+  const [localTeacherData, setLocalTeacherData] = useState<TeacherData>(() => ({
+    name: TEACHER_PROFILE.name,
+    tagline: TEACHER_PROFILE.tagline,
+    bio: TEACHER_PROFILE.bio,
+    avatarUrl: TEACHER_PROFILE.avatarUrl,
+    quote: TEACHER_PROFILE.quote,
+    facebookUrl: 'https://facebook.com/',
+    discordUrl: 'https://discord.gg/',
+    aiStudioUrl: 'https://aistudio.google.com/'
+  }));
+
+  const teacherData: TeacherData = propTeacherData || localTeacherData;
 
   // Sync real-time with Firestore systemSettings/teacher
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'systemSettings', 'teacher'), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data() as TeacherData;
-        setTeacherData(data);
-        localStorage.setItem('mnrc_teacher_data', JSON.stringify(data));
+        setLocalTeacherData(data);
       }
     }, (err) => {
       console.warn('systemSettings/teacher subscription note:', err);
@@ -60,8 +55,10 @@ export const HomeTeacherCorner: React.FC<HomeTeacherCornerProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
 
   const handleSaveTeacherData = async (newData: TeacherData) => {
-    setTeacherData(newData);
-    localStorage.setItem('mnrc_teacher_data', JSON.stringify(newData));
+    setLocalTeacherData(newData);
+    if (onUpdateTeacherData) {
+      onUpdateTeacherData(newData);
+    }
     try {
       await setDoc(doc(db, 'systemSettings', 'teacher'), newData, { merge: true });
     } catch (e) {

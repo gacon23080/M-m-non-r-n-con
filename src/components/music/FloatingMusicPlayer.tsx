@@ -42,8 +42,42 @@ export const FloatingMusicPlayer: React.FC = () => {
   const [newTitle, setNewTitle] = useState<string>('');
   const [newArtist, setNewArtist] = useState<string>('');
   const [newUrl, setNewUrl] = useState<string>('');
+  const ytIframeRef = React.useRef<HTMLIFrameElement | null>(null);
 
   const currentYtId = currentTrack?.youtubeId || (currentTrack?.youtubeUrl ? extractYouTubeId(currentTrack.youtubeUrl) : null);
+
+  // Synchronize YouTube playback with isPlaying, isMuted, and volume
+  React.useEffect(() => {
+    if (!ytIframeRef.current || !ytIframeRef.current.contentWindow) return;
+    try {
+      if (isPlaying) {
+        ytIframeRef.current.contentWindow.postMessage(
+          JSON.stringify({ event: 'command', func: 'playVideo', args: [] }),
+          '*'
+        );
+      } else {
+        ytIframeRef.current.contentWindow.postMessage(
+          JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }),
+          '*'
+        );
+        ytIframeRef.current.contentWindow.postMessage(
+          JSON.stringify({ event: 'command', func: 'stopVideo', args: [] }),
+          '*'
+        );
+      }
+      // Apply volume & mute
+      ytIframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func: isMuted ? 'mute' : 'unMute', args: [] }),
+        '*'
+      );
+      ytIframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func: 'setVolume', args: [Math.round(volume * 100)] }),
+        '*'
+      );
+    } catch (e) {
+      // ignore cross-origin postMessage errors
+    }
+  }, [isPlaying, isMuted, volume, currentYtId]);
 
   const handleAddTrack = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,15 +106,25 @@ export const FloatingMusicPlayer: React.FC = () => {
     <div className="fixed bottom-5 right-5 z-40 select-none flex flex-col items-end">
       {/* Hidden YouTube Audio Streamer */}
       {currentYtId && (
-        <div className="hidden">
+        <div className="hidden pointer-events-none">
           <iframe
+            ref={ytIframeRef}
             key={currentYtId}
             width="1"
             height="1"
-            src={`https://www.youtube-nocookie.com/embed/${currentYtId}?autoplay=${isPlaying ? 1 : 0}&enablejsapi=1&playsinline=1&controls=0`}
+            src={`https://www.youtube-nocookie.com/embed/${currentYtId}?enablejsapi=1&autoplay=${isPlaying ? 1 : 0}&playsinline=1&controls=0`}
             title="YouTube In-App Audio"
             allow="autoplay; encrypted-media"
-            sandbox="allow-scripts allow-same-origin"
+            onLoad={() => {
+              if (!isPlaying && ytIframeRef.current?.contentWindow) {
+                try {
+                  ytIframeRef.current.contentWindow.postMessage(
+                    JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }),
+                    '*'
+                  );
+                } catch (e) {}
+              }
+            }}
           />
         </div>
       )}
@@ -177,64 +221,70 @@ export const FloatingMusicPlayer: React.FC = () => {
 
             {/* Track List */}
             <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 no-scrollbar">
-              {playlist.map((track) => {
-                const isSelected = track.id === currentTrack.id;
-                const hasYt = track.youtubeUrl || track.youtubeId;
-                return (
-                  <motion.div
-                    layout
-                    key={track.id}
-                    className={`flex items-center justify-between gap-2 p-2 rounded-2xl transition-all ${
-                      isSelected
-                        ? 'bg-gradient-to-r from-[#EAE2F8] to-[#FDE5EF] text-[#4A3C56] font-bold border border-white'
-                        : 'hover:bg-white/80 text-[#6D5E7B]'
-                    }`}
-                  >
-                    <div
-                      onClick={() => selectTrack(track)}
-                      className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer"
+              {playlist.length === 0 ? (
+                <div className="p-4 text-center rounded-2xl bg-[#FAF4FE] text-xs text-[#827290] font-luxury italic">
+                  Danh sách nhạc hiện đang trống. Cô giáo có thể nhấn (+) phía trên để thêm bài hát mới vào lớp nhé ♡
+                </div>
+              ) : (
+                playlist.map((track) => {
+                  const isSelected = currentTrack?.id === track.id;
+                  const hasYt = track.youtubeUrl || track.youtubeId;
+                  return (
+                    <motion.div
+                      layout
+                      key={track.id}
+                      className={`flex items-center justify-between gap-2 p-2 rounded-2xl transition-all ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-[#EAE2F8] to-[#FDE5EF] text-[#4A3C56] font-bold border border-white'
+                          : 'hover:bg-white/80 text-[#6D5E7B]'
+                      }`}
                     >
-                      <img
-                        src={track.coverUrl}
-                        alt={track.title}
-                        className="w-8 h-8 rounded-xl object-cover shadow-xs shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs truncate flex items-center gap-1">
-                          <span>{track.title}</span>
-                          {hasYt && (
-                            <span className="text-[9px] bg-pink-100 text-pink-700 px-1 rounded font-bold">
-                              YT
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-[#827290] truncate font-luxury italic">
-                          {track.artist}
+                      <div
+                        onClick={() => selectTrack(track)}
+                        className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer"
+                      >
+                        <img
+                          src={track.coverUrl}
+                          alt={track.title}
+                          className="w-8 h-8 rounded-xl object-cover shadow-xs shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs truncate flex items-center gap-1">
+                            <span>{track.title}</span>
+                            {hasYt && (
+                              <span className="text-[9px] bg-pink-100 text-pink-700 px-1 rounded font-bold">
+                                YT
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-[#827290] truncate font-luxury italic">
+                            {track.artist}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Track Actions */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[10px] text-[#8E75B2] font-caption">
-                        {track.duration}
-                      </span>
-                      {(isAdmin || playlist.length > 1) && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeTrack(track.id);
-                          }}
-                          className="p-1 text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
-                          title="Xóa bài nhạc"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
+                      {/* Track Actions */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] text-[#8E75B2] font-caption">
+                          {track.duration}
+                        </span>
+                        {isAdmin && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeTrack(track.id);
+                            }}
+                            className="p-1 text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
+                            title="Xóa bài nhạc"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })
+              )}
             </div>
 
             {/* Volume Slider */}
@@ -275,7 +325,9 @@ export const FloatingMusicPlayer: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 className="bg-white/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white shadow-md text-xs font-bold text-[#4A3C56] flex items-center gap-2"
               >
-                <span className="truncate max-w-[120px]">{currentTrack.title}</span>
+                <span className="truncate max-w-[120px]">
+                  {currentTrack ? currentTrack.title : 'Chưa có nhạc'}
+                </span>
                 <button
                   onClick={togglePlayerExpanded}
                   className="text-[10px] text-[#8E75B2] hover:underline font-normal cursor-pointer"
@@ -290,8 +342,9 @@ export const FloatingMusicPlayer: React.FC = () => {
               {/* Spinning Vinyl Record Icon */}
               <button
                 onClick={togglePlay}
-                className="relative w-10 h-10 rounded-full bg-gradient-to-tr from-[#E0D3F8] via-[#FCE4EE] to-[#FEF5E7] p-[1.5px] shadow-xs cursor-pointer hover:scale-105 transition-transform"
-                title={isPlaying ? "Tạm dừng nhạc" : "Phát nhạc lớp học"}
+                disabled={playlist.length === 0}
+                className="relative w-10 h-10 rounded-full bg-gradient-to-tr from-[#E0D3F8] via-[#FCE4EE] to-[#FEF5E7] p-[1.5px] shadow-xs cursor-pointer hover:scale-105 transition-transform disabled:opacity-50"
+                title={playlist.length === 0 ? "Chưa có nhạc trong lớp" : (isPlaying ? "Tạm dừng nhạc" : "Phát nhạc lớp học")}
               >
                 <div className="w-full h-full rounded-full bg-[#3F334D] flex items-center justify-center relative overflow-hidden">
                   <Disc3 className={`w-6 h-6 text-[#FCD34D] ${isPlaying ? 'animate-spin' : ''}`} style={{ animationDuration: '3.5s' }} />
@@ -307,7 +360,8 @@ export const FloatingMusicPlayer: React.FC = () => {
               <div className="flex items-center gap-0.5 pr-1">
                 <button
                   onClick={nextTrack}
-                  className="p-1 rounded-full hover:bg-[#FFF0F5] text-[#827290] hover:text-[#4A3C56] transition-colors cursor-pointer"
+                  disabled={playlist.length <= 1}
+                  className="p-1 rounded-full hover:bg-[#FFF0F5] text-[#827290] hover:text-[#4A3C56] transition-colors cursor-pointer disabled:opacity-30"
                   title="Bài tiếp theo"
                 >
                   <SkipForward className="w-3.5 h-3.5" />
@@ -340,12 +394,13 @@ export const FloatingMusicPlayer: React.FC = () => {
             </div>
 
             <div className="text-[10px] font-bold text-[#4A3C56] truncate max-w-[80px]">
-              {currentTrack.title}
+              {currentTrack ? currentTrack.title : 'Chưa có nhạc'}
             </div>
 
             <button
               onClick={togglePlay}
-              className="p-1 rounded-full bg-[#EAE2F8] text-[#4A3C56] hover:bg-[#D9C6F5] transition-all cursor-pointer font-bold"
+              disabled={playlist.length === 0}
+              className="p-1 rounded-full bg-[#EAE2F8] text-[#4A3C56] hover:bg-[#D9C6F5] transition-all cursor-pointer font-bold disabled:opacity-40"
             >
               {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 ml-0.5" />}
             </button>

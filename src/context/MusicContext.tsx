@@ -15,7 +15,7 @@ export function extractYouTubeId(url: string): string | null {
 
 interface MusicContextType {
   playlist: MusicTrack[];
-  currentTrack: MusicTrack;
+  currentTrack: MusicTrack | null;
   isPlaying: boolean;
   volume: number;
   isMuted: boolean;
@@ -26,6 +26,7 @@ interface MusicContextType {
   activeNote: string;
   togglePlay: () => void;
   startPlayback: () => void;
+  pausePlayback: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
   selectTrack: (track: MusicTrack) => void;
@@ -34,49 +35,23 @@ interface MusicContextType {
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   togglePlayerExpanded: () => void;
-  addTrackToPlaylist: (track: MusicTrack) => void;
-  updateTrack: (track: MusicTrack) => void;
-  removeTrack: (id: string) => void;
+  addTrackToPlaylist: (track: MusicTrack) => Promise<void>;
+  updateTrack: (track: MusicTrack) => Promise<void>;
+  removeTrack: (id: string) => Promise<void>;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
 
 export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [playlist, setPlaylist] = useState<MusicTrack[]>(() => {
-    const saved = localStorage.getItem('mnrc_custom_playlist');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        // fallback
-      }
-    }
-    return INITIAL_MUSIC_TRACKS;
-  });
+  const [playlist, setPlaylist] = useState<MusicTrack[]>([]);
 
-  // Subscribe to Firestore musicTracks
+  // Subscribe to Firestore musicTracks (Strict: Never auto-seed if deleted or empty)
   useEffect(() => {
     const q = query(collection(db, 'musicTracks'));
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      if (!snapshot.empty) {
-        const tracks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MusicTrack));
-        tracks.sort((a, b) => (a.order || 0) - (b.order || 0));
-        setPlaylist(tracks);
-      } else {
-        if (!localStorage.getItem('mnrc_music_seeded')) {
-          localStorage.setItem('mnrc_music_seeded', 'true');
-          try {
-            for (const track of INITIAL_MUSIC_TRACKS) {
-              await setDoc(doc(db, 'musicTracks', track.id), track);
-            }
-          } catch (e) {
-            console.warn('Could not seed initial music tracks to Firestore:', e);
-            setPlaylist(INITIAL_MUSIC_TRACKS);
-          }
-        } else {
-          setPlaylist([]);
-        }
-      }
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const tracks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MusicTrack));
+      tracks.sort((a, b) => (a.order || 0) - (b.order || 0));
+      setPlaylist(tracks);
     }, (err) => {
       console.warn('musicTracks subscription note:', err);
     });
@@ -94,18 +69,20 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isPlayerExpanded, setIsPlayerExpanded] = useState<boolean>(false);
   const [activeNote, setActiveNote] = useState<string>('');
 
-  const currentTrack = playlist[currentTrackIndex] || playlist[0];
+  const currentTrack: MusicTrack | null = playlist[currentTrackIndex] || playlist[0] || null;
 
-  // Save playlist changes
+  // Synthesizer ambient melody handler: strictly stopped when !isPlaying or !currentTrack
   useEffect(() => {
-    localStorage.setItem('mnrc_custom_playlist', JSON.stringify(playlist));
-  }, [playlist]);
+    if (!currentTrack || !isPlaying) {
+      soundManager.stopMelody();
+      setActiveNote('');
+      return;
+    }
 
-  // If track does not have youtubeId, play pleasant web audio synthesizer
-  useEffect(() => {
-    const ytId = currentTrack?.youtubeId || (currentTrack?.youtubeUrl ? extractYouTubeId(currentTrack.youtubeUrl) : null);
+    const ytId = currentTrack.youtubeId || (currentTrack.youtubeUrl ? extractYouTubeId(currentTrack.youtubeUrl) : null);
     
-    if (isPlaying && !ytId) {
+    // Play soothing synth melody only if there is no external YouTube track
+    if (!ytId) {
       soundManager.startMelody(currentTrack.synthTheme || 'classroom', (note) => {
         setActiveNote(note);
       });
@@ -122,7 +99,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Track progress simulation
   useEffect(() => {
     let interval: any;
-    if (isPlaying) {
+    if (isPlaying && currentTrack && playlist.length > 0) {
       interval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 100) {
@@ -136,20 +113,39 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           return prev + 1;
         });
       }, 1000);
+    } else {
+      // When paused or empty, do not advance progress
+      soundManager.stopMelody();
     }
     return () => clearInterval(interval);
-  }, [isPlaying, isRepeat, currentTrackIndex]);
+  }, [isPlaying, isRepeat, currentTrackIndex, currentTrack, playlist.length]);
 
   const togglePlay = () => {
     soundManager.playBoop();
-    setIsPlaying((prev) => !prev);
+    if (isPlaying) {
+      // Pause completely
+      setIsPlaying(false);
+      soundManager.stopMelody();
+    } else {
+      if (playlist.length > 0) {
+        setIsPlaying(true);
+      }
+    }
   };
 
   const startPlayback = () => {
-    setIsPlaying(true);
+    if (playlist.length > 0) {
+      setIsPlaying(true);
+    }
+  };
+
+  const pausePlayback = () => {
+    setIsPlaying(false);
+    soundManager.stopMelody();
   };
 
   const nextTrack = () => {
+    if (playlist.length === 0) return;
     soundManager.playBoop();
     setProgress(0);
     if (isShuffle) {
@@ -161,6 +157,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const prevTrack = () => {
+    if (playlist.length === 0) return;
     soundManager.playBoop();
     setProgress(0);
     setCurrentTrackIndex((prev) => (prev - 1 + playlist.length) % playlist.length);
@@ -171,20 +168,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const idx = playlist.findIndex((t) => t.id === track.id);
     if (idx !== -1) {
       setCurrentTrackIndex(idx);
-    } else {
-      setPlaylist((prev) => [track, ...prev]);
-      setCurrentTrackIndex(0);
     }
     setIsPlaying(true);
     setProgress(0);
-    // Explicitly start synth if needed
-    const current = idx !== -1 ? playlist[idx] : track;
-    const ytId = current.youtubeId || (current.youtubeUrl ? extractYouTubeId(current.youtubeUrl) : null);
-    if (!ytId) {
-      soundManager.startMelody(current.synthTheme || 'classroom', (note) => {
-        setActiveNote(note);
-      });
-    }
   };
 
   const setVolume = (vol: number) => {
@@ -225,7 +211,6 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     soundManager.playMagicChime();
     const ytId = track.youtubeUrl ? extractYouTubeId(track.youtubeUrl) : null;
     const enriched = { ...track, youtubeId: ytId || undefined };
-    setPlaylist((prev) => [enriched, ...prev]);
     try {
       await setDoc(doc(db, 'musicTracks', track.id), enriched);
     } catch (e) {
@@ -237,7 +222,6 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     soundManager.playMagicChime();
     const ytId = track.youtubeUrl ? extractYouTubeId(track.youtubeUrl) : null;
     const enriched = { ...track, youtubeId: ytId || undefined };
-    setPlaylist((prev) => prev.map((t) => (t.id === track.id ? enriched : t)));
     try {
       await setDoc(doc(db, 'musicTracks', track.id), enriched, { merge: true });
     } catch (e) {
@@ -247,7 +231,6 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const removeTrack = async (id: string) => {
     soundManager.playBoop();
-    setPlaylist((prev) => prev.filter((t) => t.id !== id));
     try {
       await deleteDoc(doc(db, 'musicTracks', id));
     } catch (e) {
@@ -270,6 +253,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         activeNote,
         togglePlay,
         startPlayback,
+        pausePlayback,
         nextTrack,
         prevTrack,
         selectTrack,

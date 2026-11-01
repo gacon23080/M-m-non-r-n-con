@@ -57,54 +57,62 @@ export const HomeGoodStudentsCorner: React.FC<HomeGoodStudentsCornerProps> = ({
         </div>
 
         <div className="space-y-2.5">
-          {topWeekly.map((char, index) => {
-            const icons = [
-              <Crown key="1" className="w-4 h-4 text-amber-500 fill-amber-200" />,
-              <Star key="2" className="w-4 h-4 text-slate-400 fill-slate-200" />,
-              <Flower2 key="3" className="w-4 h-4 text-amber-700 fill-amber-100" />
-            ];
+          {topWeekly.length === 0 ? (
+            <div className="p-4 text-center rounded-2xl bg-white/40 text-xs text-[#7A6C88] font-luxury italic">
+              Chưa có bé nhân vật nào trong bảng xếp hạng. Hãy thêm nhân vật mới vào lớp nhé ♡
+            </div>
+          ) : (
+            <>
+              {topWeekly.map((char, index) => {
+                const icons = [
+                  <Crown key="1" className="w-4 h-4 text-amber-500 fill-amber-200" />,
+                  <Star key="2" className="w-4 h-4 text-slate-400 fill-slate-200" />,
+                  <Flower2 key="3" className="w-4 h-4 text-amber-700 fill-amber-100" />
+                ];
 
-            return (
-              <div
-                key={char.id}
-                onClick={() => {
-                  soundManager.playBoop();
-                  onOpenDetail(char);
-                }}
-                className="flex items-center gap-3 p-2.5 rounded-2xl bg-white/60 hover:bg-white border border-white/80 hover:border-[#D2C8F2] transition-all cursor-pointer group shadow-xs"
-              >
-                {/* Rank Badge */}
-                <div className="w-6 flex items-center justify-center font-bold text-xs">
-                  {icons[index]}
-                </div>
-
-                {/* Avatar */}
-                <img
-                  src={char.avatarUrl}
-                  alt={char.name}
-                  className="w-10 h-10 rounded-xl object-cover border border-white shadow-xs group-hover:scale-105 transition-transform"
-                />
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold text-[#3F334D] truncate group-hover:text-[#8E75B2]">
-                    {char.name}
+              return (
+                <div
+                  key={char.id}
+                  onClick={() => {
+                    soundManager.playBoop();
+                    onOpenDetail(char);
+                  }}
+                  className="flex items-center gap-3 p-2.5 rounded-2xl bg-white/60 hover:bg-white border border-white/80 hover:border-[#D2C8F2] transition-all cursor-pointer group shadow-xs"
+                >
+                  {/* Rank Badge */}
+                  <div className="w-6 flex items-center justify-center font-bold text-xs">
+                    {icons[index]}
                   </div>
-                  <div className="text-[10px] text-[#7A6C88] truncate font-luxury italic">
-                    bởi {char.creator}
-                  </div>
-                </div>
 
-                {/* Total Likes */}
-                <div className="text-right">
-                  <div className="text-[11px] font-bold text-[#E2799F]">
-                    {char.likesCount} ♡
+                  {/* Avatar */}
+                  <img
+                    src={char.avatarUrl}
+                    alt={char.name}
+                    className="w-10 h-10 rounded-xl object-cover border border-white shadow-xs group-hover:scale-105 transition-transform"
+                  />
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-[#3F334D] truncate group-hover:text-[#8E75B2]">
+                      {char.name}
+                    </div>
+                    <div className="text-[10px] text-[#7A6C88] truncate font-luxury italic">
+                      bởi {char.creator}
+                    </div>
                   </div>
-                  <div className="text-[9px] text-[#A092B0]">tổng lượt tim</div>
+
+                  {/* Total Likes */}
+                  <div className="text-right">
+                    <div className="text-[11px] font-bold text-[#E2799F]">
+                      {char.likesCount} ♡
+                    </div>
+                    <div className="text-[9px] text-[#A092B0]">tổng lượt tim</div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+            </>
+          )}
         </div>
       </div>
 

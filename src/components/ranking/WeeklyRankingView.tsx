@@ -93,9 +93,20 @@ export const WeeklyRankingView: React.FC<WeeklyRankingViewProps> = ({
       </div>
 
       {activeTab === 'current' ? (
-        <>
-          {/* Top 3 Podium Cards - Luxury & Distinctive */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-8">
+        sortedRanking.length === 0 ? (
+          <div className="glass-panel rounded-3xl p-12 text-center max-w-lg mx-auto bg-white/80 border border-white space-y-3">
+            <Trophy className="w-12 h-12 text-[#8E75B2] mx-auto opacity-50" />
+            <h3 className="font-heading font-bold text-lg text-[#3F334D]">
+              Chưa có nhân vật nào để xếp hạng
+            </h3>
+            <p className="text-xs text-[#7A6C88] font-luxury italic">
+              Khi cô giáo hoặc các thành viên thêm nhân vật vào lớp học, bảng xếp hạng sẽ hiển thị tại đây nhé ♡
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Top 3 Podium Cards - Luxury & Distinctive */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-8">
             
             {/* Rank 2 (Platinum / Silver Star) */}
             {top2 && (
@@ -311,6 +322,7 @@ export const WeeklyRankingView: React.FC<WeeklyRankingViewProps> = ({
             </div>
           </div>
         </>
+        )
       ) : (
         /* Past Archived Rankings */
         <div className="glass-panel rounded-3xl p-6 shadow-sm space-y-4">
