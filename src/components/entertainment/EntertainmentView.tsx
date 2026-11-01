@@ -1685,9 +1685,6 @@ export const EntertainmentView: React.FC = () => {
                                 THỐNG KÊ PHIÊN TÀI XỈU
                               </span>
                             </div>
-                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
-                              ĐÃ DỪNG 🛑
-                            </span>
                           </div>
 
                           {/* 3 Dice Breakdown Chart */}

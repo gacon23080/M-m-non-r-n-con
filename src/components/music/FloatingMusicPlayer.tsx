@@ -112,7 +112,7 @@ export const FloatingMusicPlayer: React.FC = () => {
             key={currentYtId}
             width="1"
             height="1"
-            src={`https://www.youtube-nocookie.com/embed/${currentYtId}?enablejsapi=1&autoplay=${isPlaying ? 1 : 0}&playsinline=1&controls=0`}
+            src={`https://www.youtube-nocookie.com/embed/${currentYtId}?enablejsapi=1&autoplay=1&playsinline=1&controls=0&origin=${window.location.origin}`}
             title="YouTube In-App Audio"
             allow="autoplay; encrypted-media"
             onLoad={() => {

@@ -134,8 +134,11 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const startPlayback = () => {
+    console.log('startPlayback called, playlist length:', playlist.length);
     if (playlist.length > 0) {
       setIsPlaying(true);
+    } else {
+      console.warn('Playlist is empty, cannot start playback.');
     }
   };
 

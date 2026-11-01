@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Volume2, VolumeX, Sparkles, ArrowRight, DoorOpen, LogIn, ShieldCheck } from 'lucide-react';
 import { soundManager } from '../../lib/sound';
 import { useAuth } from '../../context/AuthContext';
+import { useMusic } from '../../context/MusicContext';
 
 interface EntranceGateProps {
   onEnter: () => void;
@@ -10,6 +11,7 @@ interface EntranceGateProps {
 
 export const EntranceGate: React.FC<EntranceGateProps> = ({ onEnter }) => {
   const { profile, loginWithGoogle } = useAuth();
+  const { startPlayback } = useMusic();
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [rememberPreference, setRememberPreference] = useState<boolean>(false);
   const [isEntering, setIsEntering] = useState<boolean>(false);
@@ -23,6 +25,8 @@ export const EntranceGate: React.FC<EntranceGateProps> = ({ onEnter }) => {
   const handleEnterSchool = () => {
     if (!profile) return;
     setIsEntering(true);
+    soundManager.enabled = true;
+    startPlayback(); // Immediate interaction trigger
     if (rememberPreference) {
       localStorage.setItem('mnrc_skip_entrance', 'true');
     }

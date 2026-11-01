@@ -151,56 +151,16 @@ class SoundController {
 
   // Sparkle / Magic chime
   playMagicChime() {
-    if (!this.enabled) return;
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51]; // C5, E5, G5, C6, E6
-    notes.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const time = ctx.currentTime + idx * 0.08;
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, time);
-
-      gain.gain.setValueAtTime(0.2, time);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(time);
-      osc.stop(time + 0.35);
-    });
+    return;
   }
 
   // Bubble pop
   playPop() {
-    if (!this.enabled) return;
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(600, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.08);
-
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.09);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start();
-    osc.stop(ctx.currentTime + 0.1);
+    return;
   }
 
-  // Cute boop / click (Silenced per user request for quiet UI)
+  // Cute boop / click (Silenced per user request)
   playBoop() {
-    // Quiet UI - no button click boop
     return;
   }
 
