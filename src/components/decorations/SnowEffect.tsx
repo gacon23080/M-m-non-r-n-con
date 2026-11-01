@@ -23,7 +23,7 @@ export const SnowEffect: React.FC = () => {
     window.addEventListener('resize', handleResize);
 
     const isMobile = window.innerWidth < 768;
-    const flakeCount = isMobile ? 30 : 60; 
+    const flakeCount = isMobile ? 12 : 60; 
     const flakes: Array<{
       x: number;
       y: number;

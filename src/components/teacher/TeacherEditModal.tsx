@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Sparkles, Save, Link as LinkIcon, Image, User, Check } from 'lucide-react';
 import { soundManager } from '../../lib/sound';
+import { compressImageFile } from '../../lib/imageCompressor';
 
 export interface TeacherData {
   name: string;
@@ -87,15 +88,36 @@ export const TeacherEditModal: React.FC<TeacherEditModalProps> = ({
               className="w-20 h-20 rounded-full object-cover border-2 border-white shadow-md ring-2 ring-[#D9C6F5]"
             />
             <div className="flex-1 w-full space-y-2">
-              <label className="text-xs font-bold text-[#4A3B53] flex items-center gap-1.5">
-                <Image className="w-3.5 h-3.5 text-[#8E75B2]" />
-                <span>Link ảnh đại diện cô giáo:</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[#4A3B53] flex items-center gap-1.5">
+                  <Image className="w-3.5 h-3.5 text-[#8E75B2]" />
+                  <span>Ảnh đại diện Cô Giáo:</span>
+                </label>
+                <label className="text-[10px] bg-[#EADBFA] hover:bg-[#D9C6F5] text-[#4A3B53] font-bold px-3 py-1 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 border border-white/50 shadow-2xs">
+                  <span>📁 Tải ảnh từ máy</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const dataUrl = await compressImageFile(file);
+                          if (dataUrl) setFormData(prev => ({ ...prev, avatarUrl: dataUrl }));
+                        } catch (err) {
+                          console.warn('Image error:', err);
+                        }
+                      }
+                    }}
+                  />
+                </label>
+              </div>
               <input
-                type="url"
+                type="text"
                 value={formData.avatarUrl}
                 onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
-                placeholder="https://..."
+                placeholder="https://... hoặc đã tải từ máy"
                 className="w-full text-xs px-3.5 py-2 rounded-xl bg-white border border-[#D9C6F5] focus:outline-none focus:ring-2 focus:ring-[#8E75B2]/30 text-[#382D42]"
                 required
               />

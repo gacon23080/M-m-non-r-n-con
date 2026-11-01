@@ -22,13 +22,15 @@ import {
   Users,
   Smile,
   Image as ImageIcon,
-  X
+  X,
+  Award
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../../context/AuthContext';
 import { soundManager } from '../../lib/sound';
+import { compressImageFile } from '../../lib/imageCompressor';
 import { PlantedFlower, GameResult } from '../../types';
-import { db } from '../../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { 
   collection, 
   query, 
@@ -40,8 +42,11 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  limit
+  limit,
+  getDocs,
+  runTransaction
 } from 'firebase/firestore';
+import { motion, AnimatePresence } from 'motion/react';
 
 const BUA_CUA_ITEMS = [
   { id: 'Bau', name: 'Bầu', icon: '🌸', color: 'from-[#FDE8E8] to-[#FBD5D5]' },
@@ -86,18 +91,93 @@ interface DiscordChatMessage {
     total: number;
     outcome: string;
     parity: string;
+    isTriple?: boolean;
     recentTrend: string[];
+    countTai?: number;
+    countXiu?: number;
+    pctTai?: number;
+    pctXiu?: number;
   };
   createdAt: string;
 }
 
 type BetCategory = 'TAI' | 'XIU' | 'CHAN' | 'LE' | 'NUMBER' | 'SUM';
 
+const formatChatTime = (isoString?: string) => {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    return isoString;
+  }
+};
+
+const renderDiePipCard = (value: number) => {
+  return (
+    <div className="relative w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl shadow-md border-2 border-[#D2C8F2] flex items-center justify-center p-1.5 transition-transform hover:scale-105">
+      {value === 1 && (
+        <span className="w-4 h-4 rounded-full bg-rose-500 shadow-xs" />
+      )}
+      {value === 2 && (
+        <div className="w-full h-full flex flex-col justify-between p-0.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] self-start" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] self-end" />
+        </div>
+      )}
+      {value === 3 && (
+        <div className="w-full h-full flex flex-col justify-between p-0.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] self-start" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] self-center" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] self-end" />
+        </div>
+      )}
+      {value === 4 && (
+        <div className="w-full h-full grid grid-cols-2 gap-1 p-0.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 place-self-center" />
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 place-self-center" />
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 place-self-center" />
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 place-self-center" />
+        </div>
+      )}
+      {value === 5 && (
+        <div className="w-full h-full relative p-0.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] absolute top-1 left-1" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] absolute top-1 right-1" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] absolute bottom-1 left-1" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] absolute bottom-1 right-1" />
+        </div>
+      )}
+      {value === 6 && (
+        <div className="w-full h-full grid grid-cols-2 gap-y-1 gap-x-1.5 p-0.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] place-self-center" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] place-self-center" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] place-self-center" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] place-self-center" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] place-self-center" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4A3C56] place-self-center" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const EntertainmentView: React.FC = () => {
-  const { profile, isAdmin, modifyCoins, updateProfileData, loginWithGoogle, currentUser, sendFriendRequest } = useAuth();
+  const { 
+    profile, 
+    isAdmin, 
+    modifyCoins, 
+    updateProfileData, 
+    loginWithGoogle, 
+    currentUser, 
+    sendFriendRequest,
+    updateFlowers 
+  } = useAuth();
   const [activeTab, setActiveTab] = useState<'garden' | 'taixiu' | 'baucua' | 'checkin'>('garden');
   const [selectedUserCard, setSelectedUserCard] = useState<{ uid: string; displayName: string; photoURL: string } | null>(null);
-  const [hasEnteredCasino, setHasEnteredCasino] = useState<boolean>(false);
+  const [hasEnteredCasino, setHasEnteredCasino] = useState<boolean>(true);
 
   // ==================== NICKNAME & AVATAR EDIT STATE ====================
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
@@ -125,12 +205,34 @@ export const EntertainmentView: React.FC = () => {
   const [chatImageInput, setChatImageInput] = useState<string>('');
   const [showImagePicker, setShowImagePicker] = useState<boolean>(false);
 
-  // Subscribe to Live Chat
+  // Real-time profiles map for dynamic avatar & name updates
+  const [profilesMap, setProfilesMap] = useState<Record<string, { displayName?: string; photoURL?: string }>>({});
+
   useEffect(() => {
-    const q = query(collection(db, 'liveChatMessages'), orderBy('createdAt', 'asc'), limit(25));
+    const q = query(collection(db, 'profiles'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const map: Record<string, { displayName?: string; photoURL?: string }> = {};
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (doc.id) {
+          map[doc.id] = { displayName: data.displayName, photoURL: data.photoURL };
+        }
+      });
+      setProfilesMap(map);
+    }, (err) => {
+      console.warn('profiles subscription in EntertainmentView note:', err);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Subscribe to Live Chat (generous limit to prevent message loss)
+  useEffect(() => {
+    const q = query(collection(db, 'liveChatMessages'), orderBy('createdAt', 'asc'), limit(150));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DiscordChatMessage));
       setDiscordChatMsgs(msgs);
+    }, (err) => {
+      console.warn('liveChatMessages subscription note:', err);
     });
     return () => unsubscribe();
   }, []);
@@ -142,27 +244,42 @@ export const EntertainmentView: React.FC = () => {
 
     soundManager.playBoop();
 
+    // Check if message is the .tx trigger command (e.g. '.tx', '.tx ', 'tx', '.TX')
+    const lower = text.toLowerCase();
+    const isTxCmd = lower === '.tx' || lower.startsWith('.tx ') || lower === 'tx';
+
+    // Clear input right away
+    setChatInputText('');
+    setChatImageInput('');
+    setShowImagePicker(false);
+
+    // If it's the .tx command, trigger the session immediately!
+    if (isTxCmd) {
+      handleTriggerTaiXiuSession();
+    }
+
+    const currentSenderId = profile?.uid || currentUser?.uid || 'guest-user';
+    const currentSenderName = profile?.displayName || currentUser?.displayName || 'Bé Mầm Non';
+    const currentSenderAvatar = profile?.photoURL || currentUser?.photoURL || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80';
+
     const newMsg: Omit<DiscordChatMessage, 'id'> = {
-      senderId: profile?.uid || 'anon',
-      senderName: profile?.displayName || 'Bé Ngoan',
-      senderAvatar: profile?.photoURL || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
+      senderId: currentSenderId,
+      senderName: currentSenderName,
+      senderAvatar: currentSenderAvatar,
       text: text,
       imageUrl: chatImageInput.trim() || undefined,
       createdAt: new Date().toISOString()
     };
 
+    // Optimistically add to local state immediately so user sees their chat with ZERO delay
+    const optimisticId = `local-${Date.now()}`;
+    setDiscordChatMsgs(prev => [...prev, { id: optimisticId, ...newMsg }]);
+
     try {
       await addDoc(collection(db, 'liveChatMessages'), newMsg);
-      
-      // Trigger .tx command
-      if (text.toLowerCase() === '.tx') {
-        await handleTriggerTaiXiuSession();
-      }
-    } catch (err) {}
-
-    setChatInputText('');
-    setChatImageInput('');
-    setShowImagePicker(false);
+    } catch (err) {
+      console.warn('Could not post live chat message to Firestore:', err);
+    }
   };
 
   // ==================== TÀI XỈU SHARED SESSION STATE ====================
@@ -196,6 +313,9 @@ export const EntertainmentView: React.FC = () => {
         // Set local waiting state if session document doesn't exist yet
         setSession({ status: 'waiting', gameType: 'taixiu' });
       }
+    }, (err) => {
+      console.warn('gameSessions subscription note:', err);
+      setSession((prev: any) => prev || { status: 'waiting', gameType: 'taixiu' });
     });
     return () => unsubscribe();
   }, []);
@@ -298,84 +418,158 @@ export const EntertainmentView: React.FC = () => {
   };
 
   const handleTriggerTaiXiuSession = async () => {
-    if (session?.status === 'betting') return;
+    const now = Date.now();
+    const isActivelyBetting = session?.status === 'betting' && session?.expiresAt && new Date(session.expiresAt).getTime() > now;
+    if (isActivelyBetting) return;
     
     soundManager.playMagicChime();
-    const expiresAt = new Date(Date.now() + 30000).toISOString();
+    const expiresAt = new Date(now + 30000).toISOString();
     
-    // Use setDoc with merge to handle cases where the document doesn't exist yet
-    await setDoc(doc(db, 'gameSessions', 'taixiu'), {
+    const newSessionData = {
       gameType: 'taixiu',
       status: 'betting',
-      startedAt: new Date().toISOString(),
+      startedAt: new Date(now).toISOString(),
       expiresAt,
-      updatedAt: new Date().toISOString(),
-      createdAt: session?.createdAt || new Date().toISOString()
-    }, { merge: true });
+      updatedAt: new Date(now).toISOString(),
+      createdAt: session?.createdAt || new Date(now).toISOString()
+    };
 
-    // Notify bot start
-    await addDoc(collection(db, 'liveChatMessages'), {
-      senderName: '🤖 Bot Mầm Non',
-      senderAvatar: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=100&auto=format&fit=crop&q=80',
-      text: '⚠️ PHIÊN TÀI XỈU MỚI BẮT ĐẦU! Mọi người có 30 giây để đặt cược nhé! (.tx để kích hoạt nếu hết phiên)',
-      isBot: true,
-      createdAt: new Date().toISOString()
-    });
+    // Immediate local state update so the betting interface opens right now!
+    setSession(newSessionData);
+    setBetTimer(30);
+    setTaiXiuResultNotice(null);
+    setMyActiveBet(null);
+
+    // Clear previous bets from Firestore
+    try {
+      const betsSnap = await getDocs(collection(db, 'gameSessions', 'taixiu', 'bets'));
+      for (const d of betsSnap.docs) {
+        await deleteDoc(doc(db, 'gameSessions', 'taixiu', 'bets', d.id));
+      }
+    } catch (err) {
+      console.warn('Could not clear previous bets:', err);
+    }
+
+    // Sync with Firestore
+    try {
+      await setDoc(doc(db, 'gameSessions', 'taixiu'), newSessionData, { merge: true });
+    } catch (err) {
+      console.warn('Could not sync gameSessions/taixiu:', err);
+    }
+
+    try {
+      await addDoc(collection(db, 'liveChatMessages'), {
+        senderId: 'bot-may-man',
+        senderName: '🤖 Bot May Mắn',
+        senderAvatar: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=100&auto=format&fit=crop&q=80',
+        text: '🎲 PHIÊN TÀI XỈU MỚI ĐÃ MỞ! 30 giây đặt cược bắt đầu! (Mọi người đều có thể tham gia cược cùng lúc nhé ♡)',
+        isBot: true,
+        createdAt: new Date().toISOString()
+      });
+    } catch (err) {
+      console.warn('Could not post bot announcement:', err);
+    }
   };
 
   const handleFinalizeTaiXiuSession = async () => {
-    // Basic locking
-    const lastUpdate = session.updatedAt ? new Date(session.updatedAt).getTime() : 0;
-    if (Date.now() - lastUpdate < 1500) return; 
+    if (!session || session.status !== 'betting') return;
+    
+    try {
+      await runTransaction(db, async (transaction) => {
+        const sessionDocRef = doc(db, 'gameSessions', 'taixiu');
+        const sessionSnap = await transaction.get(sessionDocRef);
+        
+        if (!sessionSnap.exists()) return;
+        const currentData = sessionSnap.data();
+        if (currentData.status !== 'betting') return; // Already finalized by someone else
 
-    const d1 = Math.floor(Math.random() * 6) + 1;
-    const d2 = Math.floor(Math.random() * 6) + 1;
-    const d3 = Math.floor(Math.random() * 6) + 1;
-    const total = d1 + d2 + d3;
+        // Check if truly expired (with 1s buffer)
+        const expiresAt = new Date(currentData.expiresAt).getTime();
+        if (Date.now() < expiresAt - 1000) return;
 
-    await updateDoc(doc(db, 'gameSessions', 'taixiu'), {
-      status: 'result',
-      lastDice: [d1, d2, d3],
-      lastTotal: total,
-      updatedAt: new Date().toISOString()
-    });
+        // Roll dice
+        const d1 = Math.floor(Math.random() * 6) + 1;
+        const d2 = Math.floor(Math.random() * 6) + 1;
+        const d3 = Math.floor(Math.random() * 6) + 1;
+        const total = d1 + d2 + d3;
 
-    // Bot posts result summary
-    const outcome = total >= 11 ? 'Tài' : 'Xỉu';
-    const parity = total % 2 === 0 ? 'Chẵn' : 'Lẻ';
-    const recentTrendList = [...taiXiuHistory.slice(0, 9).map(h => (h.total || 0) >= 11 ? 'T' : 'X'), total >= 11 ? 'T' : 'X'];
+        // Finalize session status
+        transaction.update(sessionDocRef, {
+          status: 'result',
+          lastDice: [d1, d2, d3],
+          lastTotal: total,
+          updatedAt: new Date().toISOString()
+        });
 
-    await addDoc(collection(db, 'liveChatMessages'), {
-      senderName: '🤖 Bot Mầm Non',
-      senderAvatar: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=100&auto=format&fit=crop&q=80',
-      text: `🎲 Kết quả: ${d1}-${d2}-${d3} = ${total} (${outcome} - ${parity})`,
-      isBot: true,
-      chartSummary: {
-        dice: [d1, d2, d3],
-        total,
-        outcome,
-        parity,
-        recentTrend: recentTrendList
-      },
-      createdAt: new Date().toISOString()
-    });
+        // Now fetch bets and post to chat (outside transaction to avoid complex reads, or just do it after)
+        // Actually we can post the message after the transaction succeeds.
+        // We'll return the result from the transaction.
+        return { d1, d2, d3, total };
+      }).then(async (result) => {
+        if (!result) return;
+        const { d1, d2, d3, total } = result;
 
-    // Save history record
-    await addDoc(collection(db, 'gameResults'), {
-      gameType: 'taixiu',
-      playerName: 'Sòng Bạc Mầm Non',
-      result: [`${d1}`, `${d2}`, `${d3}`],
-      total,
-      createdAt: new Date().toISOString()
-    });
+        // Fetch all bets for this session to announce winners
+        let winnerList: string[] = [];
+        try {
+          const betsSnap = await getDocs(collection(db, 'gameSessions', 'taixiu', 'bets'));
+          const allBets = betsSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any));
+          
+          allBets.forEach(b => {
+            const { category, amount, selectedNumber: selNum, selectedSum: selSum, displayName } = b;
+            let isWon = false;
+            let mult = 1.95;
+            if (category === 'TAI') isWon = total >= 11;
+            else if (category === 'XIU') isWon = total <= 10;
+            else if (category === 'CHAN') isWon = total % 2 === 0;
+            else if (category === 'LE') isWon = total % 2 !== 0;
+            else if (category === 'NUMBER') {
+              const matches = [d1, d2, d3].filter(d => d === selNum).length;
+              isWon = matches > 0;
+              mult = matches === 1 ? 2 : matches === 2 ? 3 : 4;
+            }
+            else if (category === 'SUM') {
+              isWon = total === selSum;
+              mult = TAI_XIU_SUM_MULTIPLIERS[selSum] || 6;
+            }
 
-    // Auto-return to waiting after 8s (longer for people to see)
-    setTimeout(async () => {
-      await updateDoc(doc(db, 'gameSessions', 'taixiu'), {
-        status: 'waiting',
-        updatedAt: new Date().toISOString()
+            if (isWon) {
+              const reward = Math.floor(amount * mult);
+              winnerList.push(`${displayName || 'Bé'} (+${reward} Xu)`);
+            }
+          });
+        } catch (err) {
+          console.warn('Could not fetch bets for finalization:', err);
+        }
+
+        const outcome = total >= 11 ? 'Tài' : 'Xỉu';
+        const parity = total % 2 === 0 ? 'Chẵn' : 'Lẻ';
+        const isTriple = (d1 === d2 && d2 === d3);
+        
+        const winnersText = winnerList.length > 0 
+          ? `🎉 CHÚC MỪNG CÁC BÉ ĐÃ THẮNG: ${winnerList.join(', ')}`
+          : '💬 Tiếc quá, phiên này chưa có bé nào trúng thưởng rồi... Cố gắng phiên sau nhé ♡';
+
+        await addDoc(collection(db, 'liveChatMessages'), {
+          senderId: 'bot-may-man',
+          senderName: '🤖 Bot May Mắn',
+          senderAvatar: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=100&auto=format&fit=crop&q=80',
+          text: `🎲 KẾT QUẢ PHIÊN: [${d1}] [${d2}] [${d3}] = ${total} điểm [${outcome.toUpperCase()} - ${parity.toUpperCase()}]${isTriple ? ' 🔥 BÃO TAM HOA (X3 THƯỞNG)!' : ''}\n\n${winnersText}\n\n✨ Hệ thống đã tự động cộng Xu vào ví cho các bé thắng cuộc!`,
+          isBot: true,
+          createdAt: new Date().toISOString()
+        });
+
+        await addDoc(collection(db, 'gameResults'), {
+          gameType: 'taixiu',
+          playerName: 'Sòng Bạc Mầm Non',
+          result: [`${d1}`, `${d2}`, `${d3}`],
+          total,
+          createdAt: new Date().toISOString()
+        });
       });
-    }, 8000);
+    } catch (err) {
+      console.warn('Transaction failed in Tai Xiu finalization:', err);
+    }
   };
 
   // ==================== BẦU CUA STATE ====================
@@ -404,14 +598,14 @@ export const EntertainmentView: React.FC = () => {
   const [boxReward, setBoxReward] = useState<number | null>(null);
 
   // ==================== VƯỜN HOA PROGRESSION STATE ====================
-  const [gardenSlots, setGardenSlots] = useState<GardenSlotState[]>([
+  const INITIAL_GARDEN: GardenSlotState[] = [
     {
       id: 'f-0',
       slotIndex: 0,
       flowerType: 'rose',
       flowerName: FLOWER_SPECIES.rose.name,
-      stage: 'sprout',
-      waterCount: 3,
+      stage: 'seed',
+      waterCount: 0,
       maxWater: 10,
       rewardCoins: 150,
       plantedAt: Date.now(),
@@ -460,10 +654,28 @@ export const EntertainmentView: React.FC = () => {
       isUnlocked: false,
       unlockCost: 500,
     },
-  ]);
+  ];
+
+  const [gardenSlots, setGardenSlots] = useState<GardenSlotState[]>(INITIAL_GARDEN);
+
+  // Sync garden with profile
+  useEffect(() => {
+    if (profile?.plantedFlowers && profile.plantedFlowers.length > 0) {
+      // Merge saved flowers with initial unlock states if needed
+      const merged = INITIAL_GARDEN.map(initial => {
+        const saved = profile.plantedFlowers?.find(f => f.slotIndex === initial.slotIndex);
+        if (saved) {
+          return { ...initial, ...saved, isUnlocked: true };
+        }
+        return initial;
+      });
+      setGardenSlots(merged);
+    }
+  }, [profile?.plantedFlowers]);
 
   // Firestore Subscriptions
   useEffect(() => {
+    if (!currentUser) return;
     // 1. Tài Xỉu History query
     const qTX = query(collection(db, 'gameResults'), where('gameType', '==', 'taixiu'), orderBy('createdAt', 'desc'), limit(10));
     const unTX = onSnapshot(
@@ -471,7 +683,7 @@ export const EntertainmentView: React.FC = () => {
       (snapshot) => {
         setTaiXiuHistory(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GameResult)));
       },
-      (err) => console.warn('TaiXiu history snapshot notice:', err)
+      (err) => handleFirestoreError(err, OperationType.LIST, 'gameResults (taixiu)')
     );
 
     // 2. Bầu Cua History query
@@ -481,7 +693,7 @@ export const EntertainmentView: React.FC = () => {
       (snapshot) => {
         setBaucuaHistory(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GameResult)));
       },
-      (err) => console.warn('Baucua history snapshot notice:', err)
+      (err) => handleFirestoreError(err, OperationType.LIST, 'gameResults (baucua)')
     );
 
 
@@ -489,7 +701,7 @@ export const EntertainmentView: React.FC = () => {
       unTX();
       unBC();
     };
-  }, []);
+  }, [currentUser]);
 
   // Check Daily Check-In status
   useEffect(() => {
@@ -502,7 +714,7 @@ export const EntertainmentView: React.FC = () => {
     }
   }, [profile]);
 
-  // Watering cooldown logic
+  // Watering cooldown logic: 4 times per 2 hours
   const now = Date.now();
   const recentWateringTimes = (profile?.lastWateringTimes || []).filter(t => now - t < 2 * 60 * 60 * 1000);
   const remainingWaters = 4 - recentWateringTimes.length;
@@ -525,7 +737,9 @@ export const EntertainmentView: React.FC = () => {
     soundManager.playMagicChime();
     confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
 
-    setGardenSlots(prev => prev.map(s => s.slotIndex === slotIndex ? { ...s, isUnlocked: true } : s));
+    const updated = gardenSlots.map(s => s.slotIndex === slotIndex ? { ...s, isUnlocked: true } : s);
+    setGardenSlots(updated);
+    updateFlowers(updated.filter(s => s.isUnlocked));
   };
 
   // Handle Watering
@@ -536,23 +750,24 @@ export const EntertainmentView: React.FC = () => {
     }
 
     soundManager.playPop();
-    setGardenSlots((prev) =>
-      prev.map((slot) => {
-        if (slot.slotIndex !== slotIndex || !slot.isUnlocked || slot.readyToHarvest) return slot;
-        const nextCount = slot.waterCount + 1;
-        const isReady = nextCount >= slot.maxWater;
-        return {
-          ...slot,
-          waterCount: nextCount,
-          stage: isReady ? 'bloom' : nextCount > Math.floor(slot.maxWater / 3) ? 'sprout' : 'seed',
-          readyToHarvest: isReady,
-          lastWateredAt: now
-        };
-      })
-    );
+    const updated = gardenSlots.map((slot) => {
+      if (slot.slotIndex !== slotIndex || !slot.isUnlocked || slot.readyToHarvest) return slot;
+      const nextCount = slot.waterCount + 1;
+      const isReady = nextCount >= slot.maxWater;
+      return {
+        ...slot,
+        waterCount: nextCount,
+        stage: isReady ? 'bloom' : nextCount > Math.floor(slot.maxWater / 3) ? 'sprout' : 'seed',
+        readyToHarvest: isReady,
+        lastWateredAt: now
+      } as GardenSlotState;
+    });
+
+    setGardenSlots(updated);
+    updateFlowers(updated.filter(s => s.isUnlocked));
 
     updateProfileData({
-      lastWateringTimes: [...(profile?.lastWateringTimes || []), now]
+      lastWateringTimes: [...recentWateringTimes, now]
     });
   };
 
@@ -569,23 +784,24 @@ export const EntertainmentView: React.FC = () => {
     const pickedKey = speciesKeys[slotIndex % speciesKeys.length];
     const spec = FLOWER_SPECIES[pickedKey];
 
-    setGardenSlots((prev) =>
-      prev.map((s) => {
-        if (s.slotIndex !== slotIndex) return s;
-        return {
-          ...s,
-          id: `f-${Date.now()}-${slotIndex}`,
-          flowerType: pickedKey,
-          flowerName: spec.name,
-          stage: 'seed',
-          waterCount: 0,
-          maxWater: spec.maxWater,
-          rewardCoins: spec.reward,
-          plantedAt: Date.now(),
-          readyToHarvest: false,
-        };
-      })
-    );
+    const updated = gardenSlots.map((s) => {
+      if (s.slotIndex !== slotIndex) return s;
+      return {
+        ...s,
+        id: `f-${Date.now()}-${slotIndex}`,
+        flowerType: pickedKey,
+        flowerName: spec.name,
+        stage: 'seed',
+        waterCount: 0,
+        maxWater: spec.maxWater,
+        rewardCoins: spec.reward,
+        plantedAt: Date.now(),
+        readyToHarvest: false,
+      } as GardenSlotState;
+    });
+
+    setGardenSlots(updated);
+    updateFlowers(updated.filter(s => s.isUnlocked));
   };
 
   // ==================== TÀI XỈU BETTING LOGIC (SYNCED) ====================
@@ -602,21 +818,37 @@ export const EntertainmentView: React.FC = () => {
     const finalBet = Math.max(1, parseInt(customBetInput) || betAmount);
     const currentCoins = profile?.coins ?? 200;
 
+    if (!profile) {
+      alert('Vui lòng đăng nhập để tham gia đặt cược nhé ♡');
+      return;
+    }
     if (currentCoins < finalBet) {
       alert('Bạn không đủ Xu Bé Ngoan để đặt cược!');
       return;
     }
-
     soundManager.playWheelTick();
     modifyCoins(-finalBet);
 
-    setMyActiveBet({
+    const betData = {
       category: betCategory,
       amount: finalBet,
       selectedNumber: betCategory === 'NUMBER' ? selectedNumber : undefined,
       selectedSum: betCategory === 'SUM' ? selectedSum : undefined,
+      uid: profile.uid,
+      displayName: profile.displayName,
+      createdAt: new Date().toISOString()
+    };
+
+    setMyActiveBet({
+      ...betData,
       hasCheckedResult: false
     });
+
+    try {
+      await setDoc(doc(db, 'gameSessions', 'taixiu', 'bets', profile.uid), betData);
+    } catch (err) {
+      console.warn('Could not save bet to Firestore:', err);
+    }
 
     soundManager.playMagicChime();
   };
@@ -728,12 +960,25 @@ export const EntertainmentView: React.FC = () => {
     }, 1800);
   };
 
-  const handleDeleteMessage = async (msgId: string) => {
-    if (!isAdmin) return;
+  const handleDeleteMessage = async (msgId: string, senderId?: string, senderName?: string) => {
+    const isMine = (profile?.uid && senderId && profile.uid === senderId) ||
+                   (currentUser?.uid && senderId && currentUser.uid === senderId) ||
+                   (profile?.displayName && senderName && profile.displayName === senderName);
+    
+    if (!isAdmin && !isMine) {
+      alert('Chỉ người gửi mới có thể thu hồi tin nhắn của mình, hoặc Admin mới có quyền xóa!');
+      return;
+    }
+
     try {
-      await deleteDoc(doc(db, 'liveChatMessages', msgId));
+      setDiscordChatMsgs(prev => prev.filter(m => m.id !== msgId));
+      if (!msgId.startsWith('local-')) {
+        await deleteDoc(doc(db, 'liveChatMessages', msgId));
+      }
       soundManager.playBoop();
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Could not delete/recall message:', e);
+    }
   };
 
   return (
@@ -743,41 +988,7 @@ export const EntertainmentView: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-[#F0F4FF] to-white" />
       </div>
 
-      {/* Casino Entry Portal Overlay */}
-      {!hasEnteredCasino && (
-        <div className="fixed inset-0 z-[100] bg-white/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-700">
-          <div className="glass-panel bg-white/95 rounded-[40px] p-6 md:p-12 max-w-lg w-full border-4 border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] text-center space-y-5 md:space-y-6 relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-32 h-32 md:w-40 md:h-40 bg-pink-100/50 rounded-full blur-3xl" />
-            <div className="absolute -bottom-10 -left-10 w-32 h-32 md:w-40 md:h-40 bg-purple-100/50 rounded-full blur-3xl" />
-            
-            <div className="relative">
-              <div className="w-20 h-20 md:w-24 md:h-24 mx-auto bg-gradient-to-tr from-[#D9C6F5] to-[#FBD5E5] rounded-3xl flex items-center justify-center text-4xl md:text-5xl shadow-lg animate-bounce">
-                🎰
-              </div>
-              <h1 className="mt-4 md:mt-6 font-heading font-bold text-2xl md:text-4xl text-[#4A3C56] tracking-tight">
-                SÒNG BẠC MẦM NON
-              </h1>
-              <p className="mt-2 md:mt-3 text-[#827290] text-sm md:text-base font-medium leading-relaxed">
-                Chào mừng bé đến với khu vui chơi giải trí!<br/>
-                Hãy chọn <strong>Đồng Ý</strong> để bắt đầu trải nghiệm sòng bạc live cùng mọi người nhé ♡
-              </p>
-            </div>
-
-            <button
-              onClick={() => {
-                setHasEnteredCasino(true);
-                soundManager.playMagicChime();
-              }}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#8E75B2] to-[#E2799F] text-white font-bold text-lg shadow-xl hover:shadow-2xl hover:scale-102 active:scale-95 transition-all cursor-pointer font-heading flex items-center justify-center gap-3"
-            >
-              <Check className="w-6 h-6" />
-              <span>ĐỒNG Ý VÀO SÒNG</span>
-            </button>
-            
-
-          </div>
-        </div>
-      )}
+      {/* Casino Entry Portal removed per user request */}
       {/* Top Banner & Profile Avatar Picker Header */}
       <div className="glass-panel rounded-3xl p-6 md:p-7 border border-white shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 bg-gradient-to-r from-white/90 via-[#FAF4FE]/90 to-[#FFF7EF]/90">
         <div>
@@ -787,11 +998,11 @@ export const EntertainmentView: React.FC = () => {
               Mầm Non Rắn Con • Khu Giải Trí Pastel
             </span>
           </div>
-          <h1 className="font-heading font-bold text-2xl md:text-3xl text-[#4A3C56]">
+          <h1 className="font-luxury font-[100] text-3xl md:text-5xl text-[#4A3C56] tracking-[0.1em] uppercase">
             KHU VUI CHƠI BÉ NGOAN ♡
           </h1>
-          <p className="text-xs text-[#827290] font-luxury italic">
-            Trồng hoa (10 - 100 giọt nước), Tài Xỉu Nổ Hũ & Khung Chat Pastel Tự Động Thống Kê!
+          <p className="text-[10px] md:text-xs text-[#827290] font-luxury italic tracking-widest uppercase opacity-70 mt-1">
+            Vườn hoa mộng mơ • Tài Xỉu Nổ Hũ • Chat Pastel Nghệ Thuật
           </p>
         </div>
 
@@ -832,16 +1043,15 @@ export const EntertainmentView: React.FC = () => {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onload = () => {
-                            if (typeof reader.result === 'string') {
-                              setAvatarInput(reader.result);
-                            }
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const dataUrl = await compressImageFile(file);
+                            if (dataUrl) setAvatarInput(dataUrl);
+                          } catch (err) {
+                            console.warn('Image error:', err);
+                          }
                         }
                       }}
                     />
@@ -945,8 +1155,18 @@ export const EntertainmentView: React.FC = () => {
         </button>
       </div>
 
-      {/* ==================== TAB 1: VƯỜN HOA ==================== */}
-      {activeTab === 'garden' && (
+      {/* Sub-Tabs Content Area with Smooth Transitions */}
+      <div className="relative">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+          >
+            {/* ==================== TAB 1: VƯỜN HOA ==================== */}
+            {activeTab === 'garden' && (
         <div className="glass-panel rounded-3xl p-6 md:p-8 border border-white shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-black/5">
             <div>
@@ -954,7 +1174,7 @@ export const EntertainmentView: React.FC = () => {
                 Vườn Hoa Nông Trại Pastel
               </h2>
               <p className="text-xs text-[#827290] font-luxury italic">
-                Ban đầu có 1 cây, mua thêm chậu mới và tưới giọt nước (10, 25, 50, 100 giọt) để thu hoạch tới 2,000 Xu!
+                Bạn có 4 lượt tưới mỗi 2 tiếng. Mỗi cây cần từ 10 - 100 giọt nước để thu hoạch tới 2,000 Xu!
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold bg-white/80 px-4 py-2 rounded-full border border-white shadow-2xs">
@@ -1073,7 +1293,7 @@ export const EntertainmentView: React.FC = () => {
 
       {/* ==================== TAB 2: TÀI XỈU NỔ HŨ + CHAT PASTEL THỐNG KÊ ==================== */}
       {activeTab === 'taixiu' && (
-        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6 items-start">
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6 items-start animate-in fade-in duration-500">
           
           {/* Main Tài Xỉu Arena */}
           <div className="w-full lg:col-span-7 glass-panel rounded-3xl p-5 md:p-8 border border-white shadow-xs space-y-6">
@@ -1106,16 +1326,25 @@ export const EntertainmentView: React.FC = () => {
                       {session.lastDice?.map((d: number, idx: number) => (
                         <div
                           key={idx}
-                          className="w-12 h-12 rounded-xl bg-white border-2 border-[#D2C8F2] shadow-md flex items-center justify-center font-heading font-bold text-2xl text-[#4A3C56]"
+                          className="w-11 h-11 md:w-12 md:h-12 rounded-xl bg-white border-2 border-[#D2C8F2] shadow-md flex items-center justify-center font-heading font-bold text-xl md:text-2xl text-[#4A3C56]"
                         >
                           {d}
                         </div>
                       ))}
                     </div>
-                    <div className="text-center mt-2">
-                      <span className="block text-xs font-bold text-[#827290] uppercase tracking-widest mb-1">Tổng điểm</span>
-                      <span className="text-3xl font-heading font-bold text-[#E2799F] bg-white px-4 py-1 rounded-full border border-pink-100 shadow-sm">
-                        {session.lastTotal}
+                    <div className="text-center mt-1 flex flex-col items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl font-heading font-bold text-[#E2799F] bg-white px-3 py-0.5 rounded-full border border-pink-100 shadow-xs">
+                          {session.lastTotal} điểm
+                        </span>
+                        <span className={`text-xs font-heading font-black px-3 py-1 rounded-full text-white shadow-xs ${
+                          session.lastTotal >= 11 ? 'bg-gradient-to-r from-rose-500 to-pink-500' : 'bg-gradient-to-r from-purple-600 to-indigo-600'
+                        }`}>
+                          {session.lastTotal >= 11 ? 'TÀI' : 'XỈU'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-[#827290] font-bold mt-1 bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+                        🛑 Phiên đã dừng lại
                       </span>
                     </div>
                   </div>
@@ -1126,20 +1355,37 @@ export const EntertainmentView: React.FC = () => {
                       <span className="text-5xl animate-spin" style={{ animationDuration: '1.5s' }}>🎲</span>
                       <span className="text-5xl animate-spin" style={{ animationDuration: '2.5s' }}>🎲</span>
                     </div>
-                    <div className="bg-white/80 px-4 py-1.5 rounded-full border border-white text-xs font-bold text-[#8E75B2]">
-                      Đang nhận cược...
+                    <div className="bg-white/90 px-4 py-1.5 rounded-full border border-white text-xs font-bold text-[#8E75B2] shadow-xs">
+                      Đang nhận cược... ({betTimer}s)
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-3 text-center px-4">
-                    <Dices className="w-12 h-12 text-[#D2C8F2] opacity-50" />
-                    <p className="text-xs font-bold text-[#827290]">
-                      Phiên chưa bắt đầu.<br/>Gõ <span className="text-[#8E75B2]">.tx</span> vào chat để bắt đầu!
+                  <div className="flex flex-col items-center gap-2 text-center px-4">
+                    <Dices className="w-10 h-10 text-[#8E75B2] animate-bounce" />
+                    <p className="text-xs font-bold text-[#4A3C56]">
+                      Sẵn sàng chơi Tài Xỉu!
                     </p>
                   </div>
                 )}
               </div>
-              <div className="text-center mt-4">
+
+              {/* Direct Start Session Button on Board */}
+              {session?.status !== 'betting' && (
+                <div className="mt-4 flex flex-col items-center gap-1.5">
+                  <button
+                    onClick={handleTriggerTaiXiuSession}
+                    className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#8E75B2] via-[#E2799F] to-[#8E75B2] text-white font-bold text-xs shadow-md hover:shadow-lg hover:scale-105 transition-all cursor-pointer font-heading flex items-center gap-1.5"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>BẮT ĐẦU CƯỢC PHIÊN MỚI (.tx)</span>
+                  </button>
+                  <span className="text-[10px] text-[#827290] font-luxury italic">
+                    (Hoặc gõ <strong className="text-[#8E75B2]">.tx</strong> vào kênh chat bên cạnh nhé!)
+                  </span>
+                </div>
+              )}
+
+              <div className="text-center mt-3">
                 {taiXiuResultNotice && (
                   <div className={`p-4 rounded-2xl border-2 animate-in slide-in-from-top-4 duration-500 ${
                     taiXiuResultNotice.won ? 'bg-green-50 border-green-200 text-green-700' : 'bg-rose-50 border-rose-200 text-rose-700'
@@ -1327,123 +1573,211 @@ export const EntertainmentView: React.FC = () => {
 
             {/* Live Messages List */}
             <div className="flex-1 overflow-y-auto py-3 space-y-3 no-scrollbar pr-1">
-              {discordChatMsgs.map((msg) => (
-                <div key={msg.id} className="flex items-start gap-2.5 p-2 rounded-2xl bg-[#FAF4FE]/60 border border-white hover:bg-white transition-colors group">
-                  <img
-                    src={msg.senderAvatar}
-                    alt={msg.senderName}
-                    onClick={() => setSelectedUserCard({ uid: `dc-${msg.id}`, displayName: msg.senderName, photoURL: msg.senderAvatar })}
-                    className="w-8 h-8 rounded-full object-cover border border-[#D2C8F2] shrink-0 mt-0.5 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
-                    title="Bấm để kết bạn & chat 1-1"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          onClick={() => setSelectedUserCard({ uid: `dc-${msg.id}`, displayName: msg.senderName, photoURL: msg.senderAvatar })}
-                          className={`text-xs font-bold cursor-pointer hover:underline ${msg.isBot ? 'text-[#E2799F]' : 'text-[#8E75B2]'}`}
-                        >
-                          {msg.senderName}
-                        </span>
-                        {msg.isBot && (
-                          <span className="text-[9px] bg-pink-100 text-pink-700 font-bold px-1.5 py-0.2 rounded border border-pink-200">
-                            BOT
-                          </span>
-                        )}
-                        <span className="text-[9px] text-gray-400">{msg.createdAt}</span>
-                      </div>
+              {discordChatMsgs.map((msg) => {
+                const isMine = (profile?.uid && msg.senderId && profile.uid === msg.senderId) ||
+                               (currentUser?.uid && msg.senderId && currentUser.uid === msg.senderId) ||
+                               (profile?.displayName && msg.senderName && profile.displayName === msg.senderName);
+                const canManage = isAdmin || isMine;
+                const senderProf = msg.senderId ? profilesMap[msg.senderId] : null;
+                const displayAvatar = (isMine && profile?.photoURL) ? profile.photoURL : (senderProf?.photoURL || msg.senderAvatar);
+                const displayName = (isMine && profile?.displayName) ? profile.displayName : (senderProf?.displayName || msg.senderName);
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => {
-                            soundManager.playBoop();
-                            setChatInputText(`@${msg.senderName}: `);
-                          }}
-                          className="p-1 text-[#8E75B2] hover:bg-white rounded-full text-[10px]"
-                          title="Trả lời"
-                        >
-                          ↩
-                        </button>
-                        {(isAdmin || profile?.displayName === msg.senderName) && (
-                          <button
-                            onClick={() => handleDeleteMessage(msg.id)}
-                            className="p-1 text-rose-500 hover:bg-rose-50 rounded-full text-[10px]"
-                            title="Xóa tin nhắn"
+                return (
+                  <div key={msg.id} className="flex items-start gap-2.5 p-2 rounded-2xl bg-[#FAF4FE]/60 border border-white hover:bg-white transition-colors group">
+                    <img
+                      src={displayAvatar}
+                      alt={displayName}
+                      onClick={() => setSelectedUserCard({ uid: msg.senderId || `dc-${msg.id}`, displayName: displayName, photoURL: displayAvatar })}
+                      className="w-8 h-8 rounded-full object-cover border border-[#D2C8F2] shrink-0 mt-0.5 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
+                      title="Bấm để kết bạn & chat 1-1"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            onClick={() => setSelectedUserCard({ uid: msg.senderId || `dc-${msg.id}`, displayName: displayName, photoURL: displayAvatar })}
+                            className={`text-xs font-bold cursor-pointer hover:underline ${msg.isBot ? 'text-[#E2799F]' : 'text-[#8E75B2]'}`}
                           >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-[#4A3C56] mt-0.5 leading-relaxed break-words font-medium">
-                      {msg.text}
-                    </p>
-
-                    {/* Render Image Attachment in Chat */}
-                    {msg.imageUrl && (
-                      <div className="mt-2">
-                        <img
-                          src={msg.imageUrl}
-                          alt="Attachment"
-                          className="max-h-40 rounded-2xl border border-white shadow-xs object-cover hover:scale-102 transition-transform"
-                        />
-                      </div>
-                    )}
-
-                    {/* Bot Mini Chart Card Post */}
-                    {msg.chartSummary && (
-                      <div className="mt-2 p-3 bg-white rounded-2xl border border-[#D2C8F2] shadow-2xs space-y-2">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-[#8E75B2] border-b border-black/5 pb-1">
-                          <span className="flex items-center gap-1">
-                            <Activity className="w-3.5 h-3.5 text-[#E2799F]" /> Thống Kê Trận Vừa Rồi
+                            {displayName}
                           </span>
-                          <span className="text-[#E2799F] font-heading">
-                            🎲 {msg.chartSummary.dice.join('-')} = {msg.chartSummary.total} ({msg.chartSummary.outcome})
-                          </span>
-                        </div>
-
-                        {/* Trend dots summary */}
-                        <div className="flex items-center gap-1 text-[10px] text-[#827290]">
-                          <span>Xu hướng:</span>
-                          {msg.chartSummary.recentTrend.map((t, idx) => (
-                            <span
-                              key={idx}
-                              className={`px-1.5 py-0.2 rounded font-bold text-[9px] ${
-                                t === 'Tài' ? 'bg-pink-100 text-pink-700' : 'bg-purple-100 text-purple-700'
-                              }`}
-                            >
-                              {t === 'Tài' ? 'T' : 'X'}
+                          {msg.isBot && (
+                            <span className="text-[9px] bg-pink-100 text-pink-700 font-bold px-1.5 py-0.2 rounded border border-pink-200">
+                              BOT MAY MẮN
                             </span>
-                          ))}
+                          )}
+                          {isMine && !msg.isBot && (
+                            <span className="text-[9px] bg-purple-100 text-[#8E75B2] font-bold px-1.5 py-0.2 rounded border border-purple-200">
+                              Tôi
+                            </span>
+                          )}
+                          <span className="text-[9px] text-gray-400">
+                            {formatChatTime(msg.createdAt)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => {
+                              soundManager.playBoop();
+                              setChatInputText(`@${msg.senderName}: `);
+                            }}
+                            className="p-1 text-[#8E75B2] hover:bg-white rounded-full text-[10px]"
+                            title="Trả lời"
+                          >
+                            ↩
+                          </button>
+                          {canManage && (
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id, msg.senderId, msg.senderName)}
+                              className="px-1.5 py-0.5 text-rose-500 hover:bg-rose-50 rounded-lg text-[10px] flex items-center gap-0.5 cursor-pointer transition-colors"
+                              title={isMine && !isAdmin ? "Thu hồi tin nhắn này" : "Xóa tin nhắn (Admin)"}
+                            >
+                              <span>🗑️</span>
+                              <span className="text-[9px] font-semibold">{isMine && !isAdmin ? "Thu hồi" : "Xóa"}</span>
+                            </button>
+                          )}
                         </div>
                       </div>
-                    )}
+
+                      <p className="text-xs text-[#4A3C56] mt-0.5 leading-relaxed break-words font-medium">
+                        {msg.text}
+                      </p>
+
+                      {/* Render Image Attachment in Chat */}
+                      {msg.imageUrl && (
+                        <div className="mt-2">
+                          <img
+                            src={msg.imageUrl}
+                            alt="Attachment"
+                            className="max-h-40 rounded-2xl border border-white shadow-xs object-cover hover:scale-102 transition-transform"
+                          />
+                        </div>
+                      )}
+
+                      {/* Bot May Mắn Full 3-Dice & Trend Chart Card */}
+                      {msg.chartSummary && (
+                        <div className="mt-2.5 p-3.5 bg-gradient-to-br from-white via-[#FAF6FE] to-[#FFF5F8] rounded-2xl border-2 border-[#D2C8F2] shadow-xs space-y-3">
+                          {/* Card Header */}
+                          <div className="flex items-center justify-between border-b border-black/5 pb-2">
+                            <div className="flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                              <span className="text-xs font-bold text-[#4A3C56] font-heading">
+                                THỐNG KÊ PHIÊN TÀI XỈU
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                              ĐÃ DỪNG 🛑
+                            </span>
+                          </div>
+
+                          {/* 3 Dice Breakdown Chart */}
+                          <div>
+                            <div className="text-[9px] uppercase font-bold text-[#827290] mb-1.5 tracking-wider font-caption">
+                              Biểu đồ 3 xí ngầu:
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              {msg.chartSummary.dice.map((dVal, dIdx) => (
+                                <div key={dIdx} className="flex flex-col items-center gap-1 p-2 bg-white rounded-xl border border-[#E9DCF8] shadow-2xs">
+                                  <span className="text-[9px] font-bold text-[#8E75B2]">
+                                    Xúc xắc #{dIdx + 1}
+                                  </span>
+                                  {renderDiePipCard(dVal)}
+                                  <span className="text-xs font-heading font-bold text-[#4A3C56]">
+                                    {dVal} điểm
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Result Outcome & Parity Banner */}
+                          <div className={`p-2.5 rounded-xl border flex items-center justify-between ${
+                            msg.chartSummary.outcome === 'Tài'
+                              ? 'bg-gradient-to-r from-rose-50 to-pink-50 border-rose-200 text-rose-800'
+                              : 'bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 text-purple-800'
+                          }`}>
+                            <div>
+                              <div className="text-[9px] font-bold uppercase tracking-wider opacity-80">
+                                Kết quả phiên vừa rồi:
+                              </div>
+                              <div className="text-base font-heading font-black">
+                                {msg.chartSummary.outcome.toUpperCase()} — {msg.chartSummary.total} ĐIỂM
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="inline-block px-2.5 py-1 rounded-full text-xs font-bold font-heading bg-white shadow-2xs border border-current">
+                                {msg.chartSummary.parity} {msg.chartSummary.isTriple ? '• 🔥 BÃO X3!' : ''}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Trend Cầu Tài Xỉu Chart */}
+                          <div className="space-y-1.5 bg-white/90 p-2.5 rounded-xl border border-[#E9DCF8] shadow-2xs">
+                            <div className="flex items-center justify-between text-[10px] font-bold text-[#62566F]">
+                              <span>Biểu đồ soi cầu (Lịch sử gần đây):</span>
+                              <span>
+                                Tài: {msg.chartSummary.pctTai ?? 50}% • Xỉu: {msg.chartSummary.pctXiu ?? 50}%
+                              </span>
+                            </div>
+
+                            {/* Percentage Bar */}
+                            <div className="h-2 rounded-full overflow-hidden flex bg-gray-100">
+                              <div
+                                className="h-full bg-gradient-to-r from-rose-400 to-pink-500 transition-all duration-500"
+                                style={{ width: `${msg.chartSummary.pctTai ?? 50}%` }}
+                              />
+                              <div
+                                className="h-full bg-gradient-to-r from-indigo-400 to-purple-500 transition-all duration-500"
+                                style={{ width: `${msg.chartSummary.pctXiu ?? 50}%` }}
+                              />
+                            </div>
+
+                            {/* Sequence of Past Rounds */}
+                            <div className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar">
+                              {msg.chartSummary.recentTrend.map((t, idx) => {
+                                const isLast = idx === msg.chartSummary!.recentTrend.length - 1;
+                                const isT = t === 'T' || t === 'Tài';
+                                return (
+                                  <div
+                                    key={idx}
+                                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 transition-transform ${
+                                      isT
+                                        ? 'bg-rose-500 text-white shadow-xs'
+                                        : 'bg-indigo-600 text-white shadow-xs'
+                                    } ${isLast ? 'ring-2 ring-amber-400 scale-110 font-black' : 'opacity-80'}`}
+                                    title={isT ? 'Tài' : 'Xỉu'}
+                                  >
+                                    {isT ? 'T' : 'X'}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Prompt & Quick Action Button to Start New Round */}
+                          <div className="pt-1 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-black/5">
+                            <span className="text-[10px] text-[#827290] font-luxury italic text-center sm:text-left">
+                              🔔 Phiên đã dừng! Gõ <strong className="text-[#8E75B2]">.tx</strong> để mở phiên mới:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleTriggerTaiXiuSession}
+                              className="w-full sm:w-auto px-3 py-1 rounded-xl bg-gradient-to-r from-[#8E75B2] to-[#E2799F] hover:opacity-90 text-white font-bold text-[11px] shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <Dices className="w-3 h-3" />
+                              <span>Mở Phiên Mới (.tx)</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Chat Input Bar & Image Upload Attachment */}
             <div className="pt-2 border-t border-[#F1EBF9] space-y-2">
-              {showImagePicker && (
-                <div className="p-2 bg-purple-50 rounded-2xl border border-purple-100 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={chatImageInput}
-                    onChange={(e) => setChatImageInput(e.target.value)}
-                    placeholder="Dán link ảnh đính kèm vào tin nhắn..."
-                    className="flex-1 px-3 py-1 rounded-xl bg-white border border-[#D2C8F2] text-xs text-[#4A3C56] focus:outline-none"
-                  />
-                  <button
-                    onClick={() => setShowImagePicker(false)}
-                    className="p-1 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
               {showImagePicker && (
                 <div className="p-2.5 mb-2 bg-[#FAF4FE] rounded-2xl border border-[#D2C8F2] flex flex-col gap-2 animate-in fade-in zoom-in-95">
                   <div className="flex items-center justify-between text-xs font-bold text-[#4A3C56]">
@@ -1469,6 +1803,10 @@ export const EntertainmentView: React.FC = () => {
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            if (file.size > 500 * 1024) {
+                              alert('Ảnh quá lớn! Vui lòng chọn ảnh dưới 500KB để đảm bảo mượt mà nhé ♡');
+                              return;
+                            }
                             const reader = new FileReader();
                             reader.onload = () => {
                               if (typeof reader.result === 'string') {
@@ -1503,17 +1841,18 @@ export const EntertainmentView: React.FC = () => {
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          if (typeof reader.result === 'string') {
-                            setChatImageInput(reader.result);
+                        try {
+                          const dataUrl = await compressImageFile(file);
+                          if (dataUrl) {
+                            setChatImageInput(dataUrl);
                             setShowImagePicker(true);
                           }
-                        };
-                        reader.readAsDataURL(file);
+                        } catch (err) {
+                          console.warn('Image error:', err);
+                        }
                       }
                     }}
                   />
@@ -1523,9 +1862,18 @@ export const EntertainmentView: React.FC = () => {
                   type="text"
                   value={chatInputText}
                   onChange={(e) => setChatInputText(e.target.value)}
-                  placeholder="Gửi tin nhắn hoặc đính kèm ảnh..."
+                  placeholder="Gửi tin nhắn hoặc gõ .tx để bắt đầu cược..."
                   className="flex-1 bg-transparent text-xs text-[#4A3C56] placeholder-[#9F91A8] focus:outline-none"
                 />
+
+                <button
+                  type="button"
+                  onClick={handleTriggerTaiXiuSession}
+                  className="px-2 py-1 rounded-lg bg-[#FAF4FE] hover:bg-[#EAE2F8] text-[#8E75B2] border border-[#D2C8F2] text-[10px] font-bold shrink-0 cursor-pointer transition-colors shadow-2xs"
+                  title="Kích hoạt phiên Tài Xỉu ngay"
+                >
+                  .tx 🎲
+                </button>
 
                 <button
                   type="submit"
@@ -1675,6 +2023,9 @@ export const EntertainmentView: React.FC = () => {
           </button>
         </div>
       )}
+    </motion.div>
+        </AnimatePresence>
+      </div>
 
       {/* Selected User Profile Modal */}
       {selectedUserCard && (

@@ -6,7 +6,9 @@ import {
   Sparkles, 
   Filter, 
   ArrowRight,
-  Pin
+  Pin,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Announcement, Character, CharacterCategory } from '../../types';
 import { CharacterCard } from '../characters/CharacterCard';
@@ -26,6 +28,10 @@ interface HomeBulletinBoardProps {
   onEditCharacter?: (char: Character) => void;
   onDeleteCharacter?: (id: string) => void;
   onAddNewCharacter?: () => void;
+  onEditAnnouncement?: (ann: Announcement) => void;
+  onDeleteAnnouncement?: (id: string) => void;
+  categories?: string[];
+  isAdmin: boolean;
 }
 
 export const HomeBulletinBoard: React.FC<HomeBulletinBoardProps> = ({
@@ -41,11 +47,15 @@ export const HomeBulletinBoard: React.FC<HomeBulletinBoardProps> = ({
   onViewAllCharacters,
   onEditCharacter,
   onDeleteCharacter,
-  onAddNewCharacter
+  onAddNewCharacter,
+  onEditAnnouncement,
+  onDeleteAnnouncement,
+  categories: customCategories,
+  isAdmin
 }) => {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
-  const categories: CharacterCategory[] = [
+  const defaultCategories: string[] = [
     'Hiện đại',
     'Cổ trang',
     'Học đường',
@@ -54,6 +64,8 @@ export const HomeBulletinBoard: React.FC<HomeBulletinBoardProps> = ({
     'Anime',
     'Original Characters'
   ];
+
+  const categories = customCategories && customCategories.length > 0 ? customCategories : defaultCategories;
 
   const filteredCharacters = characters.filter((char) => {
     const matchSearch = 
@@ -100,14 +112,42 @@ export const HomeBulletinBoard: React.FC<HomeBulletinBoardProps> = ({
                 soundManager.playBoop();
                 setSelectedAnnouncement(ann);
               }}
-              className="p-4 rounded-2xl bg-white/70 hover:bg-white border border-white/90 hover:border-[#D2C8F2] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+              className="p-4 rounded-2xl bg-white/70 hover:bg-white border border-white/90 hover:border-[#D2C8F2] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group/ann"
             >
-              <div>
+              <div className="relative">
                 <div className="flex items-center justify-between text-[10px] text-[#7A6C88] mb-1.5">
                   <span className="bg-[#EAE2F8]/70 text-[#4A3B53] font-bold px-2 py-0.5 rounded-md">
                     {ann.type === 'event' ? 'Sự kiện' : ann.type === 'update' ? 'Cập nhật' : 'Thông báo'}
                   </span>
-                  {ann.isPinned && <Pin className="w-3 h-3 text-[#E2799F] fill-[#E2799F]" />}
+                  <div className="flex items-center gap-1">
+                    {ann.isPinned && <Pin className="w-3 h-3 text-[#E2799F] fill-[#E2799F]" />}
+                    {isAdmin && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover/ann:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditAnnouncement?.(ann);
+                          }}
+                          className="p-1 rounded-md hover:bg-[#EAE2F8] text-[#8E75B2]"
+                          title="Sửa thông báo"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Gỡ thông báo này khỏi bảng tin?')) {
+                              onDeleteAnnouncement?.(ann.id);
+                            }
+                          }}
+                          className="p-1 rounded-md hover:bg-red-50 text-red-500"
+                          title="Xóa thông báo"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <h4 className="font-heading font-bold text-xs text-[#3F334D] line-clamp-2 mb-1.5">
@@ -235,23 +275,23 @@ export const HomeBulletinBoard: React.FC<HomeBulletinBoardProps> = ({
         </div>
       </div>
 
-      {/* 4. Featured Characters Section */}
+      {/* 4. Filtered Characters Section */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-[#E2799F]" />
             <div>
               <h2 className="font-heading font-bold text-lg md:text-xl text-[#3F334D]">
-                NHỮNG BÉ ĐANG ĐƯỢC YÊU THÍCH ♡
+                TỦ NHÂN VẬT AI STUDIO ♡
               </h2>
               <p className="text-xs text-[#7A6C88] font-luxury italic">
-                Tuyển chọn những nhân vật nhận được nhiều tình cảm nhất từ cộng đồng
+                {searchTerm || selectedCategory || selectedTag ? 'Kết quả tìm kiếm và lọc nhân vật' : 'Khám phá thế giới nhân vật đa dạng phong cách pastel'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {onAddNewCharacter && (
+            {isAdmin && onAddNewCharacter && (
               <button
                 onClick={() => {
                   soundManager.playMagicChime();
@@ -299,7 +339,7 @@ export const HomeBulletinBoard: React.FC<HomeBulletinBoardProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {filteredCharacters.slice(0, 6).map((char) => (
+            {filteredCharacters.slice(0, 9).map((char) => (
               <CharacterCard
                 key={char.id}
                 character={char}

@@ -25,10 +25,11 @@ import {
   updateDoc,
   getDocs
 } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { Conversation, ChatMessage, UserProfile } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { soundManager } from '../../lib/sound';
+import { compressImageFile } from '../../lib/imageCompressor';
 
 const DEMO_MEMBERS: Array<{ uid: string; displayName: string; photoURL: string; bio: string }> = [
   {
@@ -65,18 +66,24 @@ export const MessengerView: React.FC = () => {
   const [showMemberModal, setShowMemberModal] = useState<boolean>(false);
   const [selectedUserCard, setSelectedUserCard] = useState<{ uid: string; displayName: string; photoURL: string } | null>(null);
   const [allMembers, setAllMembers] = useState<UserProfile[]>([]);
+  const [profilesMap, setProfilesMap] = useState<{ [uid: string]: UserProfile }>({});
 
-  // Fetch all members for friend list
+  // Fetch and subscribe to all members for real-time name & avatar updates
   useEffect(() => {
-    if (!profile) return;
-    const fetchMembers = async () => {
-      const q = query(collection(db, 'profiles'));
-      const snapshot = await getDocs(q);
+    const q = query(collection(db, 'profiles'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const members = snapshot.docs.map(doc => doc.data() as UserProfile);
       setAllMembers(members);
-    };
-    fetchMembers();
-  }, [profile]);
+      const map: { [uid: string]: UserProfile } = {};
+      members.forEach(m => {
+        if (m.uid) map[m.uid] = m;
+      });
+      setProfilesMap(map);
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'profiles');
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleDeleteMessage = async (msgId: string) => {
     soundManager.playBoop();
@@ -84,7 +91,9 @@ export const MessengerView: React.FC = () => {
       try {
         const { deleteDoc } = await import('firebase/firestore');
         await deleteDoc(doc(db, 'conversations', activeConvId, 'messages', msgId));
-      } catch (e) {}
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `conversations/${activeConvId}/messages/${msgId}`);
+      }
     } else {
       setMessages((prev) => prev.filter((m) => m.id !== msgId));
     }
@@ -108,7 +117,7 @@ export const MessengerView: React.FC = () => {
         }
       },
       (err) => {
-        console.warn('Firestore Conversations query notice:', err);
+        handleFirestoreError(err, OperationType.LIST, 'conversations');
         // Fallback conversations
         const fallbackGroup: Conversation = {
           id: 'demo-conv-1',
@@ -182,13 +191,17 @@ export const MessengerView: React.FC = () => {
         setMessages(msgs);
       },
       (err) => {
-        console.warn('Firestore Messages query notice:', err);
+        handleFirestoreError(err, OperationType.LIST, `conversations/${activeConvId}/messages`);
       }
     );
     return () => unsubscribe();
   }, [activeConvId]);
 
   const activeConv = conversations.find((c) => c.id === activeConvId);
+  const activeOtherUid = activeConv && activeConv.type === 'direct' ? activeConv.participants.find(p => p !== profile?.uid) : null;
+  const activeOtherProf = activeOtherUid ? profilesMap[activeOtherUid] : null;
+  const activeHeaderAvatar = (activeConv?.type === 'direct' && activeOtherProf?.photoURL) ? activeOtherProf.photoURL : (activeConv?.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80');
+  const activeHeaderName = (activeConv?.type === 'direct' && activeOtherProf?.displayName) ? activeOtherProf.displayName : (activeConv?.name || '');
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,19 +210,20 @@ export const MessengerView: React.FC = () => {
     soundManager.playBoop();
     modifyCoins(10); // +10 Xu per chat message
 
-    const msgData: Omit<ChatMessage, 'id'> = {
+    const msgData: ChatMessage = {
+      id: `m-${Date.now()}`,
       conversationId: activeConvId,
       senderId: profile.uid,
       senderName: profile.displayName,
       senderAvatar: profile.photoURL,
       text: messageInput.trim(),
-      imageUrl: imageAttachment || undefined,
-      replyTo: replyingTo || undefined,
+      ...(imageAttachment ? { imageUrl: imageAttachment } : {}),
+      ...(replyingTo ? { replyTo: replyingTo } : {}),
       createdAt: new Date().toISOString()
     };
 
     if (activeConvId.startsWith('demo-')) {
-      setMessages((prev) => [...prev, { id: `m-${Date.now()}`, ...msgData }]);
+      setMessages((prev) => [...prev, msgData]);
       setConversations((prev) =>
         prev.map((c) =>
           c.id === activeConvId
@@ -218,11 +232,16 @@ export const MessengerView: React.FC = () => {
         )
       );
     } else {
-      await addDoc(collection(db, 'conversations', activeConvId, 'messages'), msgData);
-      await updateDoc(doc(db, 'conversations', activeConvId), {
-        lastMessage: messageInput.trim() || 'Đã gửi hình ảnh',
-        lastMessageAt: new Date().toISOString()
-      });
+      try {
+        const { id, ...payload } = msgData;
+        await addDoc(collection(db, 'conversations', activeConvId, 'messages'), payload);
+        await updateDoc(doc(db, 'conversations', activeConvId), {
+          lastMessage: messageInput.trim() || 'Đã gửi hình ảnh',
+          lastMessageAt: new Date().toISOString()
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `conversations/${activeConvId}`);
+      }
     }
 
     setMessageInput('');
@@ -351,6 +370,11 @@ export const MessengerView: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {filteredConversations.map((conv) => {
             const isSelected = conv.id === activeConvId;
+            const otherUid = conv.type === 'direct' ? conv.participants.find(p => p !== profile?.uid) : null;
+            const otherProf = otherUid ? profilesMap[otherUid] : null;
+            const convAvatar = (conv.type === 'direct' && otherProf?.photoURL) ? otherProf.photoURL : (conv.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80');
+            const convName = (conv.type === 'direct' && otherProf?.displayName) ? otherProf.displayName : conv.name;
+
             return (
               <div
                 key={conv.id}
@@ -366,8 +390,8 @@ export const MessengerView: React.FC = () => {
               >
                 <div className="relative">
                   <img
-                    src={conv.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80'}
-                    alt={conv.name}
+                    src={convAvatar}
+                    alt={convName}
                     className="w-10 h-10 rounded-full object-cover border border-[#D2C8F2]"
                   />
                   {conv.type === 'group' ? (
@@ -384,7 +408,7 @@ export const MessengerView: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-heading font-bold text-xs text-[#62566F] truncate">
-                      {conv.name}
+                      {convName}
                     </span>
                     {conv.type === 'direct' && (
                       <span className="text-[9px] bg-pink-100 text-pink-700 font-bold px-1.5 py-0.2 rounded-full">
@@ -416,13 +440,13 @@ export const MessengerView: React.FC = () => {
                   <ArrowLeft className="w-5 h-5" />
                 </button>
                 <img
-                  src={activeConv.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80'}
-                  alt={activeConv.name}
+                  src={activeHeaderAvatar}
+                  alt={activeHeaderName}
                   className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover border border-[#D2C8F2]"
                 />
                 <div>
                   <h3 className="font-heading font-bold text-xs md:text-sm text-[#62566F] flex items-center gap-1.5">
-                    <span className="truncate max-w-[120px] md:max-w-none">{activeConv.name}</span>
+                    <span className="truncate max-w-[120px] md:max-w-none">{activeHeaderName}</span>
                     {activeConv.type === 'direct' && (
                       <span className="text-[8px] md:text-[10px] bg-purple-100 text-purple-700 px-1.5 md:px-2 py-0.5 rounded-full font-bold">
                         1-1
@@ -440,6 +464,9 @@ export const MessengerView: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-5 space-y-3">
               {messages.map((msg) => {
                 const isMe = msg.senderId === profile?.uid;
+                const senderProf = profilesMap[msg.senderId];
+                const msgAvatar = isMe ? (profile?.photoURL || msg.senderAvatar) : (senderProf?.photoURL || msg.senderAvatar);
+                const msgName = isMe ? (profile?.displayName || msg.senderName) : (senderProf?.displayName || msg.senderName);
 
                 return (
                   <div
@@ -448,9 +475,9 @@ export const MessengerView: React.FC = () => {
                   >
                     {!isMe && (
                       <img
-                        src={msg.senderAvatar}
-                        alt={msg.senderName}
-                        onClick={() => setSelectedUserCard({ uid: msg.senderId, displayName: msg.senderName, photoURL: msg.senderAvatar })}
+                        src={msgAvatar}
+                        alt={msgName}
+                        onClick={() => setSelectedUserCard({ uid: msg.senderId, displayName: msgName, photoURL: msgAvatar })}
                         className="w-7 h-7 rounded-full object-cover border border-[#D2C8F2] mb-1 cursor-pointer hover:scale-110 transition-transform"
                         title="Bấm để xem hồ sơ & kết bạn"
                       />
@@ -459,10 +486,10 @@ export const MessengerView: React.FC = () => {
                     <div className={`max-w-[70%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
                       {!isMe && (
                         <span
-                          onClick={() => setSelectedUserCard({ uid: msg.senderId, displayName: msg.senderName, photoURL: msg.senderAvatar })}
+                          onClick={() => setSelectedUserCard({ uid: msg.senderId, displayName: msgName, photoURL: msgAvatar })}
                           className="text-[10px] text-[#93879E] mb-0.5 ml-1 font-bold cursor-pointer hover:text-[#8E75B2] transition-colors"
                         >
-                          {msg.senderName}
+                          {msgName}
                         </span>
                       )}
                       
@@ -568,16 +595,15 @@ export const MessengerView: React.FC = () => {
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          if (typeof reader.result === 'string') {
-                            setImageAttachment(reader.result);
-                          }
-                        };
-                        reader.readAsDataURL(file);
+                        try {
+                          const dataUrl = await compressImageFile(file);
+                          if (dataUrl) setImageAttachment(dataUrl);
+                        } catch (err) {
+                          console.warn('Image error:', err);
+                        }
                       }
                     }}
                   />

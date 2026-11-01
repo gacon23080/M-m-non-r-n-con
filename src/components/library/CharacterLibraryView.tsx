@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, Sparkles, BookOpen, X, ArrowUpDown, Plus } from 'lucide-react';
+import { Search, Filter, Sparkles, BookOpen, X, ArrowUpDown, Plus, Tag } from 'lucide-react';
 import { Character, CharacterCategory } from '../../types';
 import { CharacterCard } from '../characters/CharacterCard';
 import { soundManager } from '../../lib/sound';
 import { useAuth } from '../../context/AuthContext';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface CharacterLibraryViewProps {
   characters: Character[];
@@ -138,7 +139,7 @@ export const CharacterLibraryView: React.FC<CharacterLibraryViewProps> = ({
             </span>
           </div>
 
-          {onAddNewCharacter && (
+          {isAdmin && onAddNewCharacter && (
             <button
               onClick={() => {
                 soundManager.playMagicChime();
@@ -148,6 +149,20 @@ export const CharacterLibraryView: React.FC<CharacterLibraryViewProps> = ({
             >
               <Plus className="w-4 h-4" />
               <span>Thêm bé mới</span>
+            </button>
+          )}
+
+          {isAdmin && onManageCategoriesAndTags && (
+            <button
+              onClick={() => {
+                soundManager.playBoop();
+                onManageCategoriesAndTags();
+              }}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-white/80 hover:bg-white text-[#8E75B2] border border-[#D5D0FA] font-bold text-xs shadow-xs hover:shadow-sm transition-all cursor-pointer font-heading"
+              title="Quản lý Thể loại & Tags của Lớp"
+            >
+              <Tag className="w-3.5 h-3.5 text-[#E2799F]" />
+              <span>Quản lý Thể loại & Tag</span>
             </button>
           )}
         </div>
@@ -310,18 +325,23 @@ export const CharacterLibraryView: React.FC<CharacterLibraryViewProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {processedCharacters.map((char) => (
-              <CharacterCard
-                key={char.id}
-                character={char}
-                onOpenDetail={onOpenDetail}
-                onLike={onLikeCharacter}
-                onEdit={onEditCharacter}
-                onDelete={onDeleteCharacter}
-              />
-            ))}
-          </div>
+          <motion.div 
+            layout
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+          >
+            <AnimatePresence>
+              {processedCharacters.map((char) => (
+                <CharacterCard
+                  key={char.id}
+                  character={char}
+                  onOpenDetail={onOpenDetail}
+                  onLike={onLikeCharacter}
+                  onEdit={onEditCharacter}
+                  onDelete={onDeleteCharacter}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
         )}
       </div>
     </div>

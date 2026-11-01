@@ -16,6 +16,7 @@ import {
 import { Character } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { soundManager } from '../../lib/sound';
+import { motion } from 'motion/react';
 
 interface CharacterDetailModalProps {
   character: Character;
@@ -96,8 +97,19 @@ export const CharacterDetailModal: React.FC<CharacterDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl bg-white rounded-3xl border border-[#E8DFF3] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm flex items-center justify-center p-3 md:p-6"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="relative w-full max-w-4xl bg-white rounded-3xl border border-[#E8DFF3] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+      >
         
         {/* Header with Close & Actions */}
         <div className="px-6 py-4 bg-gradient-to-r from-[#FFF0F5] via-[#E9E2FA] to-[#FCF0DB] border-b border-[#E8DFF3] flex items-center justify-between">
@@ -397,7 +409,7 @@ export const CharacterDetailModal: React.FC<CharacterDetailModalProps> = ({
           </div>
         </div>
 
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

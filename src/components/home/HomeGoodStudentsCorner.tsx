@@ -19,7 +19,7 @@ export const HomeGoodStudentsCorner: React.FC<HomeGoodStudentsCornerProps> = ({
   onSelectTag
 }) => {
   const topWeekly = [...characters]
-    .sort((a, b) => b.weeklyLikesCount - a.weeklyLikesCount)
+    .sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0))
     .slice(0, 3);
 
   const popularTags = [
@@ -36,13 +36,13 @@ export const HomeGoodStudentsCorner: React.FC<HomeGoodStudentsCornerProps> = ({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 1. Bé Ngoan Trong Tuần (Top 3 Preview) */}
+      {/* 1. Bảng xếp hạng bé chồng (Top 3 Preview) */}
       <div className="glass-panel rounded-3xl p-5 shadow-sm">
         <div className="flex items-center justify-between pb-3 border-b border-black/5 mb-3">
           <div className="flex items-center gap-1.5">
             <Trophy className="w-4 h-4 text-amber-500" />
             <h3 className="font-heading font-bold text-sm text-[#3F334D]">
-              Bé ngoan trong tuần
+              Bảng xếp hạng bé chồng
             </h3>
           </div>
           <button
@@ -95,12 +95,12 @@ export const HomeGoodStudentsCorner: React.FC<HomeGoodStudentsCornerProps> = ({
                   </div>
                 </div>
 
-                {/* Weekly Likes */}
+                {/* Total Likes */}
                 <div className="text-right">
                   <div className="text-[11px] font-bold text-[#E2799F]">
-                    {char.weeklyLikesCount} ♡
+                    {char.likesCount} ♡
                   </div>
-                  <div className="text-[9px] text-[#A092B0]">tuần này</div>
+                  <div className="text-[9px] text-[#A092B0]">tổng lượt tim</div>
                 </div>
               </div>
             );

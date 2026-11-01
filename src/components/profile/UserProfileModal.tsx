@@ -15,6 +15,8 @@ import { Character } from '../../types';
 import { INITIAL_STICKERS } from '../../lib/initialData';
 import { useAuth } from '../../context/AuthContext';
 import { soundManager } from '../../lib/sound';
+import { compressImageFile } from '../../lib/imageCompressor';
+import { motion } from 'motion/react';
 
 interface UserProfileModalProps {
   characters: Character[];
@@ -27,7 +29,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onClose,
   onOpenCharacterDetail
 }) => {
-  const { profile, isAdmin, updateProfileData, logout, loginWithGoogle, loginWithAdminPasscode } = useAuth();
+  const { profile, isAdmin, updateProfileData, logout, loginWithGoogle } = useAuth();
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editName, setEditName] = useState<string>(profile?.displayName || '');
   const [editBio, setEditBio] = useState<string>(profile?.bio || '');
@@ -47,8 +49,19 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl border border-[#E8DFF3] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm flex items-center justify-center p-3 md:p-6"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="relative w-full max-w-2xl bg-white rounded-3xl border border-[#E8DFF3] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+      >
         
         {/* Header */}
         <div className="px-6 py-4 bg-gradient-to-r from-[#D2C8F2] via-[#FCD3E2] to-[#FCF0DB] border-b border-[#E8DFF3] flex items-center justify-between">
@@ -104,11 +117,26 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 )}
               </div>
 
-              <p className="text-xs text-[#93879E] mt-2 leading-relaxed">
-                {profile?.bio || 'Chưa có tiểu sử giới thiệu.'}
-              </p>
+                {/* Wallet Info - Real-time sync */}
+                <div className="mt-3 flex items-center gap-3 bg-white/80 px-4 py-2 rounded-2xl border border-white shadow-xs w-fit">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#FCD34D] to-[#F59E0B] flex items-center justify-center text-white shadow-xs animate-pulse">
+                    <Award className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-[#827290] block font-caption">
+                      Ví Xu Bé Ngoan
+                    </span>
+                    <span className="text-sm font-bold text-[#4A3C56] font-heading">
+                      {profile?.coins ?? 200} Xu
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-[#93879E] mt-3 leading-relaxed">
+                  {profile?.bio || 'Chưa có tiểu sử giới thiệu.'}
+                </p>
+              </div>
             </div>
-          </div>
 
           {/* Edit Form */}
           {isEditing && (
@@ -147,16 +175,15 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onload = () => {
-                            if (typeof reader.result === 'string') {
-                              setEditAvatar(reader.result);
-                            }
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const dataUrl = await compressImageFile(file);
+                            if (dataUrl) setEditAvatar(dataUrl);
+                          } catch (err) {
+                            console.warn('Image error:', err);
+                          }
                         }
                       }}
                     />
@@ -288,56 +315,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     <span>🌐 Gmail (Google)</span>
                   </button>
                 </div>
-
-                {/* Secret Admin Passcode Login */}
-                <div className="pt-3 border-t border-dashed border-[#E8DFF3]">
-                  <div className="text-[11px] font-bold text-[#8E75B2] mb-1.5 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>Đăng nhập Cô Giáo (Admin):</span>
-                  </div>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const form = e.target as HTMLFormElement;
-                      const adminIdInput = (form.elements.namedItem('adminId') as HTMLInputElement).value;
-                      const passInput = (form.elements.namedItem('adminPass') as HTMLInputElement).value;
-                      const success = loginWithAdminPasscode(adminIdInput, passInput);
-                      if (success) {
-                        alert('Đăng nhập Cô Giáo Admin thành công! Welcome Cô Giáo ♡');
-                      } else {
-                        alert('Mã ID hoặc Mật khẩu Cô Giáo không chính xác!');
-                      }
-                    }}
-                    className="flex flex-wrap gap-2 items-center"
-                  >
-                    <input
-                      name="adminId"
-                      type="text"
-                      placeholder="Mã ID Cô Giáo..."
-                      className="px-3 py-1.5 rounded-xl bg-[#FFF0F5]/50 border border-[#E8DFF3] text-xs text-[#62566F] focus:outline-none w-28"
-                      required
-                    />
-                    <input
-                      name="adminPass"
-                      type="password"
-                      placeholder="Mật khẩu Cô Giáo..."
-                      className="px-3 py-1.5 rounded-xl bg-[#FFF0F5]/50 border border-[#E8DFF3] text-xs text-[#62566F] focus:outline-none w-32"
-                      required
-                    />
-                    <button
-                      type="submit"
-                      className="px-4 py-1.5 rounded-xl bg-[#8E75B2] hover:bg-[#78619E] text-white text-xs font-bold cursor-pointer transition-all"
-                    >
-                      Xác nhận Admin
-                    </button>
-                  </form>
-                </div>
               </div>
             )}
           </div>
         </div>
 
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

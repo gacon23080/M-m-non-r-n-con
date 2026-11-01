@@ -11,7 +11,8 @@ export type CharacterCategory =
   | 'Boylove'
   | 'Girllove'
   | 'Original Characters'
-  | 'Khác';
+  | 'Khác'
+  | (string & {});
 
 export interface Character {
   id: string;
@@ -56,6 +57,7 @@ export interface CommunityPost {
   content: string;
   noteColor: 'yellow' | 'pink' | 'lavender' | 'cyan' | 'green';
   sticker?: string;
+  imageUrl?: string;
   likesCount: number;
   likedBy: string[];
   repliesCount: number;

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Heart, MessageCircle, ExternalLink, School, Feather, Edit3, ShieldCheck } from 'lucide-react';
 import { TEACHER_PROFILE } from '../../lib/initialData';
 import { soundManager } from '../../lib/sound';
 import { useAuth } from '../../context/AuthContext';
 import { TeacherEditModal, TeacherData } from '../teacher/TeacherEditModal';
+import { db } from '../../lib/firebase';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 interface HomeTeacherCornerProps {
   onExploreLibrary: () => void;
@@ -40,11 +42,31 @@ export const HomeTeacherCorner: React.FC<HomeTeacherCornerProps> = ({
     };
   });
 
+  // Sync real-time with Firestore systemSettings/teacher
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'systemSettings', 'teacher'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data() as TeacherData;
+        setTeacherData(data);
+        localStorage.setItem('mnrc_teacher_data', JSON.stringify(data));
+      }
+    }, (err) => {
+      console.warn('systemSettings/teacher subscription note:', err);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
 
-  const handleSaveTeacherData = (newData: TeacherData) => {
+  const handleSaveTeacherData = async (newData: TeacherData) => {
     setTeacherData(newData);
     localStorage.setItem('mnrc_teacher_data', JSON.stringify(newData));
+    try {
+      await setDoc(doc(db, 'systemSettings', 'teacher'), newData, { merge: true });
+    } catch (e) {
+      console.warn('Could not save teacher data to Firestore:', e);
+    }
   };
 
   return (
@@ -192,7 +214,7 @@ export const HomeTeacherCorner: React.FC<HomeTeacherCornerProps> = ({
         </div>
 
         {/* Teacher Quick Add Character Button if admin */}
-        {onAddNewCharacter && (
+        {isAdmin && onAddNewCharacter && (
           <div className="my-3">
             <button
               onClick={() => {

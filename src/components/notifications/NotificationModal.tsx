@@ -3,6 +3,7 @@ import { Bell, X, CheckCheck, MessageCircle, Heart, Trophy, Sparkles, UserPlus, 
 import { AppNotification } from '../../types';
 import { soundManager } from '../../lib/sound';
 import { useAuth } from '../../context/AuthContext';
+import { motion } from 'motion/react';
 
 interface NotificationModalProps {
   notifications: AppNotification[];
@@ -33,8 +34,18 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl border border-[#D2C8F2] shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[80vh]">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+    >
+      <motion.div 
+        initial={{ scale: 0.95, opacity: 0, y: 10 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 10 }}
+        className="bg-white rounded-3xl border border-[#D2C8F2] shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[80vh]"
+      >
         {/* Header */}
         <div className="px-5 py-4 bg-gradient-to-r from-[#FFF0F5] to-[#E9E2FA] border-b border-[#E8DFF3] flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -123,7 +134,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             ))
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

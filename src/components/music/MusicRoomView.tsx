@@ -50,7 +50,7 @@ export const MusicRoomView: React.FC = () => {
   const [trackYoutubeUrl, setTrackYoutubeUrl] = useState<string>('');
   const [trackCoverUrl, setTrackCoverUrl] = useState<string>('');
 
-  const categories = ['Tất cả', 'Lớp học', 'Thư giãn', 'Vui nhộn', 'Anime/Shin-chan', 'Chuông trường'];
+  const categories = ['Tất cả', 'Lớp học', 'Thư giãn', 'Vui nhộn', 'Chuông trường'];
 
   const filteredPlaylist = selectedCategory === 'Tất cả'
     ? playlist
@@ -222,10 +222,10 @@ export const MusicRoomView: React.FC = () => {
               <button
                 onClick={handlePlayBell}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-white hover:bg-[#FAF4FE] text-[#8E75B2] text-xs font-bold border border-[#D2C8F2] shadow-xs cursor-pointer transition-all font-heading"
-                title="Rung chuông vào học Shin-chan"
+                title="Rung chuông vào học"
               >
                 <Bell className="w-4 h-4" />
-                <span>Rung chuông Shin-chan</span>
+                <span>Rung chuông vào lớp</span>
               </button>
             </div>
           </div>
@@ -406,7 +406,7 @@ export const MusicRoomView: React.FC = () => {
                   type="text"
                   value={trackTitle}
                   onChange={(e) => setTrackTitle(e.target.value)}
-                  placeholder="Ví dụ: Crayon Shin-chan Lullaby..."
+                  placeholder="Ví dụ: Giai điệu mộng mơ..."
                   className="w-full text-xs px-3.5 py-2 rounded-xl bg-white border border-[#D2C8F2] focus:outline-none focus:ring-2 focus:ring-[#8E75B2]/30 text-[#4A3C56]"
                   required
                 />
@@ -418,7 +418,7 @@ export const MusicRoomView: React.FC = () => {
                   type="text"
                   value={trackArtist}
                   onChange={(e) => setTrackArtist(e.target.value)}
-                  placeholder="Ví dụ: Shin-chan OST / Lofi Chill..."
+                  placeholder="Ví dụ: Lofi Chill..."
                   className="w-full text-xs px-3.5 py-2 rounded-xl bg-white border border-[#D2C8F2] focus:outline-none focus:ring-2 focus:ring-[#8E75B2]/30 text-[#4A3C56]"
                 />
               </div>

@@ -39,8 +39,9 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const message = error instanceof Error ? error.message : String(error);
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: message,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -55,9 +56,21 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
-  console.warn('Firestore Operation Notice: ', JSON.stringify(errInfo));
-  // Do not crash the entire react tree on transient permission or network issues
-  return errInfo;
+
+  console.error('Firestore Error Details:', JSON.stringify(errInfo));
+
+  // Check for common errors that shouldn't crash the whole app
+  if (message.includes('requires an index')) {
+    console.warn('Firestore Index Missing: Follow the link in the console to create it.');
+  }
+
+  // Only throw if it's a critical initialization error or if we're in a context that can handle it.
+  // For background listeners (onSnapshot), throwing here crashes the React tree.
+  // We'll log it and let the app stay alive.
+  if (operationType === OperationType.GET && path?.includes('profiles/')) {
+     // Re-throw for profile fetch as it's critical for AuthContext
+     throw new Error(JSON.stringify(errInfo));
+  }
 }
 
 // Test connection at boot
@@ -73,7 +86,6 @@ export async function testConnection(): Promise<boolean> {
   }
 }
 
-// Initial connection check
-testConnection();
+// Connection will be established on first query
 
 export { signInWithPopup, fbSignOut };

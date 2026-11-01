@@ -13,8 +13,8 @@ export const INITIAL_CHARACTERS: Character[] = [
     category: 'Original Characters',
     tags: ['#Chibi', '#BabySnake', '#MainOC', '#Cute', '#GoldenRetriever'],
     googleAiStudioUrl: 'https://aistudio.google.com/',
-    avatarUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=500&auto=format&fit=crop&q=80',
-    coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=200&auto=format&fit=crop&q=80',
+    coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80'
@@ -38,8 +38,8 @@ export const INITIAL_CHARACTERS: Character[] = [
     category: 'Cổ trang',
     tags: ['#Tsundere', '#ColdMaleLead', '#Historical', '#Romance'],
     googleAiStudioUrl: 'https://aistudio.google.com/',
-    avatarUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80',
-    coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=200&auto=format&fit=crop&q=80',
+    coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80'
     ],
@@ -62,8 +62,8 @@ export const INITIAL_CHARACTERS: Character[] = [
     category: 'Tổng tài',
     tags: ['#CEO', '#Modern', '#Romance', '#Protective'],
     googleAiStudioUrl: 'https://aistudio.google.com/',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80',
-    coverUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+    coverUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=80'
     ],
@@ -86,8 +86,8 @@ export const INITIAL_CHARACTERS: Character[] = [
     category: 'Học đường',
     tags: ['#GoldenRetriever', '#SchoolLife', '#ThanhXuân', '#Cute'],
     googleAiStudioUrl: 'https://aistudio.google.com/',
-    avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=500&auto=format&fit=crop&q=80',
-    coverUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
+    coverUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=800&auto=format&fit=crop&q=80'
     ],
@@ -110,8 +110,8 @@ export const INITIAL_CHARACTERS: Character[] = [
     category: 'Fantasy',
     tags: ['#Fantasy', '#Magic', '#Leader', '#PastelVibe'],
     googleAiStudioUrl: 'https://aistudio.google.com/',
-    avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=500&auto=format&fit=crop&q=80',
-    coverUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80',
+    coverUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&auto=format&fit=crop&q=80'
     ],
@@ -134,8 +134,8 @@ export const INITIAL_CHARACTERS: Character[] = [
     category: 'Anime',
     tags: ['#Tsundere', '#Chibi', '#CatBoy', '#Anime'],
     googleAiStudioUrl: 'https://aistudio.google.com/',
-    avatarUrl: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=500&auto=format&fit=crop&q=80',
-    coverUrl: 'https://images.unsplash.com/photo-1543852786-1cf6624b9987?w=1200&auto=format&fit=crop&q=80',
+    avatarUrl: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200&auto=format&fit=crop&q=80',
+    coverUrl: 'https://images.unsplash.com/photo-1543852786-1cf6624b9987?w=800&auto=format&fit=crop&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800&auto=format&fit=crop&q=80'
     ],
@@ -268,17 +268,6 @@ export const INITIAL_MUSIC_TRACKS: MusicTrack[] = [
     duration: '02:30',
     order: 3,
     synthTheme: 'playful'
-  },
-  {
-    id: 'track-4',
-    title: 'Giai Điệu Lớp Mầm Non (Kindergarten Chime)',
-    artist: 'Mầm Non Rắn Con',
-    audioUrl: '',
-    coverUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300&auto=format&fit=crop&q=80',
-    category: 'Chuông trường',
-    duration: '01:15',
-    order: 4,
-    synthTheme: 'bell'
   }
 ];
 

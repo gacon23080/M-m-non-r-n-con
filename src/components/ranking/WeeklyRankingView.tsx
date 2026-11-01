@@ -28,7 +28,7 @@ export const WeeklyRankingView: React.FC<WeeklyRankingViewProps> = ({
   const [activeTab, setActiveTab] = useState<'current' | 'archive'>('current');
   const [votedIds, setVotedIds] = useState<string[]>([]);
 
-  const sortedRanking = [...characters].sort((a, b) => b.weeklyLikesCount - a.weeklyLikesCount);
+  const sortedRanking = [...characters].sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0));
   const top1 = sortedRanking[0];
   const top2 = sortedRanking[1];
   const top3 = sortedRanking[2];
@@ -56,15 +56,15 @@ export const WeeklyRankingView: React.FC<WeeklyRankingViewProps> = ({
         <div className="inline-flex items-center gap-2 bg-white/75 border border-white px-4 py-1.5 rounded-full shadow-2xs mb-3">
           <Trophy className="w-4 h-4 text-amber-500" />
           <span className="text-xs font-bold text-[#4A3B53] font-caption tracking-wider">
-            BẢNG VÀNG BÉ NGOAN • TUẦN 44
+            BẢNG XẾP HẠNG BÉ CHỒNG ♡
           </span>
         </div>
 
         <h1 className="font-heading font-bold text-2xl md:text-4xl text-[#3F334D] mb-2 tracking-tight">
-          BẢNG VÀNG BÉ NGOAN TRONG TUẦN
+          BẢNG XẾP HẠNG BÉ CHỒNG
         </h1>
         <p className="text-xs md:text-sm text-[#7A6C88] font-luxury italic">
-          Tôn vinh những nhân vật chăm ngoan được cả lớp yêu quý nhất trong tuần này!
+          Tôn vinh những nhân vật được cả lớp yêu quý nhất dựa trên tổng lượt tim!
         </p>
 
         {/* Tab switch */}
@@ -126,9 +126,9 @@ export const WeeklyRankingView: React.FC<WeeklyRankingViewProps> = ({
                 </p>
 
                 <div className="w-full bg-white/70 rounded-2xl py-2 px-3 flex items-center justify-between text-xs mb-3 border border-white">
-                  <span className="text-[#7A6C88]">Phiếu tuần:</span>
+                  <span className="text-[#7A6C88]">Tổng lượt tim:</span>
                   <strong className="text-[#E2799F] font-bold text-sm">
-                    {top2.weeklyLikesCount} ♡
+                    {top2.likesCount} ♡
                   </strong>
                 </div>
 
@@ -141,7 +141,7 @@ export const WeeklyRankingView: React.FC<WeeklyRankingViewProps> = ({
                       : 'bg-gradient-to-r from-[#EAE2F8] to-[#FDE5EF] text-[#3F334D] border border-white hover:shadow'
                   }`}
                 >
-                  {votedIds.includes(top2.id) ? 'Đã bỏ phiếu' : 'Bỏ phiếu cho bé ♡'}
+                  {votedIds.includes(top2.id) ? 'Đã bầu bé ngoan' : 'Bầu bé ngoan ♡'}
                 </button>
               </div>
             )}
@@ -159,7 +159,7 @@ export const WeeklyRankingView: React.FC<WeeklyRankingViewProps> = ({
 
                 <div className="text-xs font-bold text-amber-700 uppercase tracking-widest mt-3 mb-2 font-caption flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>HẠNG 1 • QUÁN QUÂN BÉ NGOAN</span>
+                  <span>HẠNG 1 • QUÁN QUÂN BÉ CHỒNG</span>
                   <Sparkles className="w-3.5 h-3.5" />
                 </div>
 
@@ -177,9 +177,9 @@ export const WeeklyRankingView: React.FC<WeeklyRankingViewProps> = ({
                 </p>
 
                 <div className="w-full bg-white/80 border border-white rounded-2xl py-2.5 px-4 flex items-center justify-between text-xs mb-3 shadow-2xs">
-                  <span className="text-[#7A6C88]">Phiếu bình chọn:</span>
+                  <span className="text-[#7A6C88]">Tổng lượt tim:</span>
                   <strong className="text-[#E2799F] font-bold text-base">
-                    {top1.weeklyLikesCount} ♡
+                    {top1.likesCount} ♡
                   </strong>
                 </div>
 
@@ -192,7 +192,7 @@ export const WeeklyRankingView: React.FC<WeeklyRankingViewProps> = ({
                       : 'bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 text-amber-950 border border-white hover:brightness-105'
                   }`}
                 >
-                  {votedIds.includes(top1.id) ? 'Đã bỏ phiếu' : 'Bỏ phiếu cho Quán quân ♡'}
+                  {votedIds.includes(top1.id) ? 'Đã bầu Quán quân' : 'Bầu cho Quán quân ♡'}
                 </button>
               </div>
             )}
@@ -226,9 +226,9 @@ export const WeeklyRankingView: React.FC<WeeklyRankingViewProps> = ({
                 </p>
 
                 <div className="w-full bg-white/70 rounded-2xl py-2 px-3 flex items-center justify-between text-xs mb-3 border border-white">
-                  <span className="text-[#7A6C88]">Phiếu tuần:</span>
+                  <span className="text-[#7A6C88]">Tổng lượt tim:</span>
                   <strong className="text-[#E2799F] font-bold text-sm">
-                    {top3.weeklyLikesCount} ♡
+                    {top3.likesCount} ♡
                   </strong>
                 </div>
 
@@ -288,9 +288,9 @@ export const WeeklyRankingView: React.FC<WeeklyRankingViewProps> = ({
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <span className="text-sm font-bold text-[#E2799F]">
-                          {char.weeklyLikesCount} ♡
+                          {char.likesCount} ♡
                         </span>
-                        <div className="text-[10px] text-[#A092B0]">lượt bình chọn</div>
+                        <div className="text-[10px] text-[#A092B0]">tổng lượt tim</div>
                       </div>
 
                       <button

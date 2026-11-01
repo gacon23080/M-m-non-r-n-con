@@ -3,6 +3,7 @@ import { Heart, Eye, Sparkles, Edit3, Trash2 } from 'lucide-react';
 import { Character } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { soundManager } from '../../lib/sound';
+import { motion } from 'motion/react';
 
 interface CharacterCardProps {
   character: Character;
@@ -59,12 +60,17 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
   };
 
   return (
-    <div
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      whileHover={{ y: -8, transition: { duration: 0.2 } }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => {
         soundManager.playBoop();
         onOpenDetail(character);
       }}
-      className="group relative bg-white/75 backdrop-blur-xl rounded-3xl border border-white/90 p-3.5 shadow-[0_8px_25px_rgba(150,130,190,0.06)] hover:shadow-[0_16px_36px_rgba(150,130,190,0.12)] transition-all duration-300 hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between overflow-hidden"
+      className="group relative bg-white/75 backdrop-blur-xl rounded-3xl border border-white/90 p-3.5 shadow-[0_8px_25px_rgba(150,130,190,0.06)] hover:shadow-[0_16px_36px_rgba(150,130,190,0.12)] transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
     >
       {/* Top Image Container */}
       <div className="relative w-full h-52 rounded-2xl overflow-hidden bg-[#FFF5F8] mb-3">
@@ -192,6 +198,6 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

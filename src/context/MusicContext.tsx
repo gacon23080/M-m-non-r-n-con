@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { MusicTrack } from '../types';
 import { INITIAL_MUSIC_TRACKS } from '../lib/initialData';
 import { soundManager } from '../lib/sound';
+import { db } from '../lib/firebase';
+import { collection, onSnapshot, setDoc, deleteDoc, doc, query, orderBy, getDocs } from 'firebase/firestore';
 
 export function extractYouTubeId(url: string): string | null {
   if (!url) return null;
@@ -51,6 +53,36 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     return INITIAL_MUSIC_TRACKS;
   });
+
+  // Subscribe to Firestore musicTracks
+  useEffect(() => {
+    const q = query(collection(db, 'musicTracks'));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      if (!snapshot.empty) {
+        const tracks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MusicTrack));
+        tracks.sort((a, b) => (a.order || 0) - (b.order || 0));
+        setPlaylist(tracks);
+      } else {
+        if (!localStorage.getItem('mnrc_music_seeded')) {
+          localStorage.setItem('mnrc_music_seeded', 'true');
+          try {
+            for (const track of INITIAL_MUSIC_TRACKS) {
+              await setDoc(doc(db, 'musicTracks', track.id), track);
+            }
+          } catch (e) {
+            console.warn('Could not seed initial music tracks to Firestore:', e);
+            setPlaylist(INITIAL_MUSIC_TRACKS);
+          }
+        } else {
+          setPlaylist([]);
+        }
+      }
+    }, (err) => {
+      console.warn('musicTracks subscription note:', err);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -145,6 +177,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     setIsPlaying(true);
     setProgress(0);
+    // Explicitly start synth if needed
+    const current = idx !== -1 ? playlist[idx] : track;
+    const ytId = current.youtubeId || (current.youtubeUrl ? extractYouTubeId(current.youtubeUrl) : null);
+    if (!ytId) {
+      soundManager.startMelody(current.synthTheme || 'classroom', (note) => {
+        setActiveNote(note);
+      });
+    }
   };
 
   const setVolume = (vol: number) => {
@@ -181,23 +221,38 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsPlayerExpanded((prev) => !prev);
   };
 
-  const addTrackToPlaylist = (track: MusicTrack) => {
+  const addTrackToPlaylist = async (track: MusicTrack) => {
     soundManager.playMagicChime();
     const ytId = track.youtubeUrl ? extractYouTubeId(track.youtubeUrl) : null;
     const enriched = { ...track, youtubeId: ytId || undefined };
     setPlaylist((prev) => [enriched, ...prev]);
+    try {
+      await setDoc(doc(db, 'musicTracks', track.id), enriched);
+    } catch (e) {
+      console.warn('Could not save track to Firestore:', e);
+    }
   };
 
-  const updateTrack = (track: MusicTrack) => {
+  const updateTrack = async (track: MusicTrack) => {
     soundManager.playMagicChime();
     const ytId = track.youtubeUrl ? extractYouTubeId(track.youtubeUrl) : null;
     const enriched = { ...track, youtubeId: ytId || undefined };
     setPlaylist((prev) => prev.map((t) => (t.id === track.id ? enriched : t)));
+    try {
+      await setDoc(doc(db, 'musicTracks', track.id), enriched, { merge: true });
+    } catch (e) {
+      console.warn('Could not update track in Firestore:', e);
+    }
   };
 
-  const removeTrack = (id: string) => {
+  const removeTrack = async (id: string) => {
     soundManager.playBoop();
     setPlaylist((prev) => prev.filter((t) => t.id !== id));
+    try {
+      await deleteDoc(doc(db, 'musicTracks', id));
+    } catch (e) {
+      console.warn('Could not delete track from Firestore:', e);
+    }
   };
 
   return (

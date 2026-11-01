@@ -14,40 +14,74 @@ import {
   Check, 
   X, 
   RefreshCw,
-  Sparkles
+  Sparkles,
+  Layers,
+  Tag,
+  Music,
+  Play,
+  Pause,
+  ExternalLink
 } from 'lucide-react';
-import { Character, Announcement, AnonymousMessage, CharacterCategory } from '../../types';
+import { Character, Announcement, AnonymousMessage, CharacterCategory, MusicTrack } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useMusic } from '../../context/MusicContext';
 import { soundManager } from '../../lib/sound';
 
 interface AdminDashboardProps {
   characters: Character[];
   announcements: Announcement[];
+  categories?: string[];
+  tags?: string[];
+  onAddCategory?: (category: string) => void;
+  onDeleteCategory?: (category: string) => void;
+  onAddTag?: (tag: string) => void;
+  onDeleteTag?: (tag: string) => void;
   onAddCharacter: (character: Character) => void;
   onUpdateCharacter: (character: Character) => void;
   onDeleteCharacter: (id: string) => void;
   onAddAnnouncement: (announcement: Announcement) => void;
+  onUpdateAnnouncement: (announcement: Announcement) => void;
   onDeleteAnnouncement: (id: string) => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   characters,
   announcements,
+  categories: customCategories = [],
+  tags: customTags = [],
+  onAddCategory,
+  onDeleteCategory,
+  onAddTag,
+  onDeleteTag,
   onAddCharacter,
   onUpdateCharacter,
   onDeleteCharacter,
   onAddAnnouncement,
+  onUpdateAnnouncement,
   onDeleteAnnouncement
 }) => {
   const { profile } = useAuth();
-  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'characters' | 'announcements'>('overview');
+  const { playlist, addTrackToPlaylist, removeTrack, currentTrack, isPlaying, togglePlay, selectTrack } = useMusic();
+  const [activeAdminTab, setActiveAdminTab] = useState<'overview' | 'characters' | 'announcements' | 'categories_tags' | 'music'>('overview');
   
+  // Category & Tag Form State
+  const [newCatInput, setNewCatInput] = useState<string>('');
+  const [newTagInput, setNewTagInput] = useState<string>('');
+
+  // Music Track Form State
+  const [showAddMusicModal, setShowAddMusicModal] = useState<boolean>(false);
+  const [newTrackTitle, setNewTrackTitle] = useState<string>('');
+  const [newTrackArtist, setNewTrackArtist] = useState<string>('Cô Giáo Rắn Con');
+  const [newTrackUrl, setNewTrackUrl] = useState<string>('');
+  const [newTrackCategory, setNewTrackCategory] = useState<string>('Lớp học');
+  const [newTrackDuration, setNewTrackDuration] = useState<string>('03:00');
+
   // Character Form State
   const [showCharModal, setShowCharModal] = useState<boolean>(false);
   const [editingCharId, setEditingCharId] = useState<string | null>(null);
   const [charName, setCharName] = useState<string>('');
   const [charCreator, setCharCreator] = useState<string>('');
-  const [charCategory, setCharCategory] = useState<CharacterCategory>('Original Characters');
+  const [charCategory, setCharCategory] = useState<string>('Original Characters');
   const [charShortDesc, setCharShortDesc] = useState<string>('');
   const [charFullDesc, setCharFullDesc] = useState<string>('');
   const [charPersonality, setCharPersonality] = useState<string>('');
@@ -58,11 +92,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [charAvatar, setCharAvatar] = useState<string>('https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=500&auto=format&fit=crop&q=80');
 
   // Announcement Form State
+  const [editingAnnId, setEditingAnnId] = useState<string | null>(null);
   const [annTitle, setAnnTitle] = useState<string>('');
   const [annContent, setAnnContent] = useState<string>('');
   const [annType, setAnnType] = useState<'notice' | 'event' | 'update'>('notice');
 
-  const categories: CharacterCategory[] = [
+  const defaultCategories = [
     'Hiện đại',
     'Cổ trang',
     'Học đường',
@@ -77,6 +112,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     'Original Characters',
     'Khác'
   ];
+
+  const categories = customCategories.length > 0 ? customCategories : defaultCategories;
 
   // Stats calculation
   const totalLikes = characters.reduce((acc, c) => acc + c.likesCount, 0);
@@ -177,19 +214,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!annTitle.trim() || !annContent.trim()) return;
 
     soundManager.playMagicChime();
-    const newAnn: Announcement = {
-      id: `ann-${Date.now()}`,
-      title: annTitle.trim(),
-      content: annContent.trim(),
-      type: annType,
-      isPinned: true,
-      authorName: profile?.displayName || 'Cô Giáo Chủ Nhiệm',
-      createdAt: new Date().toISOString()
-    };
+    
+    if (editingAnnId) {
+      const updatedAnn: Announcement = {
+        id: editingAnnId,
+        title: annTitle.trim(),
+        content: annContent.trim(),
+        type: annType,
+        isPinned: true,
+        authorName: profile?.displayName || 'Cô Giáo Chủ Nhiệm',
+        createdAt: announcements.find(a => a.id === editingAnnId)?.createdAt || new Date().toISOString()
+      };
+      onUpdateAnnouncement(updatedAnn);
+      setEditingAnnId(null);
+    } else {
+      const newAnn: Announcement = {
+        id: `ann-${Date.now()}`,
+        title: annTitle.trim(),
+        content: annContent.trim(),
+        type: annType,
+        isPinned: true,
+        authorName: profile?.displayName || 'Cô Giáo Chủ Nhiệm',
+        createdAt: new Date().toISOString()
+      };
+      onAddAnnouncement(newAnn);
+    }
 
-    onAddAnnouncement(newAnn);
     setAnnTitle('');
     setAnnContent('');
+    setAnnType('notice');
+  };
+
+  const handleStartEditAnn = (ann: Announcement) => {
+    soundManager.playBoop();
+    setEditingAnnId(ann.id);
+    setAnnTitle(ann.title);
+    setAnnContent(ann.content);
+    setAnnType(ann.type as any);
+    // Switch tab if not already on it
+    setActiveAdminTab('announcements');
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -218,36 +283,58 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* Admin Tabs */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => setActiveAdminTab('overview')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer font-heading ${
             activeAdminTab === 'overview'
               ? 'bg-[#A594D6] text-white shadow-xs'
-              : 'bg-white text-[#62566F] border border-[#E8DFF3]'
+              : 'bg-white text-[#62566F] border border-[#E8DFF3] hover:bg-white/80'
           }`}
         >
           Tổng Quan Thống Kê
         </button>
         <button
           onClick={() => setActiveAdminTab('characters')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer font-heading ${
             activeAdminTab === 'characters'
               ? 'bg-[#A594D6] text-white shadow-xs'
-              : 'bg-white text-[#62566F] border border-[#E8DFF3]'
+              : 'bg-white text-[#62566F] border border-[#E8DFF3] hover:bg-white/80'
           }`}
         >
           Quản Lý Nhân Vật ({characters.length})
         </button>
         <button
           onClick={() => setActiveAdminTab('announcements')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer font-heading ${
             activeAdminTab === 'announcements'
               ? 'bg-[#A594D6] text-white shadow-xs'
-              : 'bg-white text-[#62566F] border border-[#E8DFF3]'
+              : 'bg-white text-[#62566F] border border-[#E8DFF3] hover:bg-white/80'
           }`}
         >
           Bảng Thông Báo ({announcements.length})
+        </button>
+        <button
+          onClick={() => setActiveAdminTab('categories_tags')}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer font-heading flex items-center gap-1.5 ${
+            activeAdminTab === 'categories_tags'
+              ? 'bg-[#A594D6] text-white shadow-xs'
+              : 'bg-white text-[#62566F] border border-[#E8DFF3] hover:bg-white/80'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Thể Loại & Tags ({categories.length}/{customTags.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveAdminTab('music')}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer font-heading flex items-center gap-1.5 ${
+            activeAdminTab === 'music'
+              ? 'bg-[#A594D6] text-white shadow-xs'
+              : 'bg-white text-[#62566F] border border-[#E8DFF3] hover:bg-white/80'
+          }`}
+        >
+          <Music className="w-3.5 h-3.5" />
+          <span>Quản Lý Playlist Nhạc ({playlist.length})</span>
         </button>
       </div>
 
@@ -395,8 +482,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Create Announcement */}
           <div className="md:col-span-5 bg-white/90 backdrop-blur-md rounded-3xl border border-[#E8DFF3] p-5 shadow-sm">
-            <h3 className="font-heading font-bold text-base text-[#62566F] mb-3">
-              Đăng thông báo mới
+            <h3 className="font-heading font-bold text-base text-[#62566F] mb-3 flex items-center justify-between">
+              <span>{editingAnnId ? 'Chỉnh sửa thông báo' : 'Đăng thông báo mới'}</span>
+              {editingAnnId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingAnnId(null);
+                    setAnnTitle('');
+                    setAnnContent('');
+                    setAnnType('notice');
+                  }}
+                  className="text-[10px] font-bold text-rose-500 hover:underline"
+                >
+                  Hủy chỉnh sửa
+                </button>
+              )}
             </h3>
             <form onSubmit={handleAddAnn} className="space-y-3">
               <div>
@@ -444,9 +545,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-full bg-[#A594D6] text-white text-xs font-bold hover:bg-[#8F7BBF] transition-all cursor-pointer font-heading"
+                className={`w-full py-2.5 rounded-full text-white text-xs font-bold transition-all cursor-pointer font-heading ${
+                  editingAnnId ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-[#A594D6] hover:bg-[#8F7BBF]'
+                }`}
               >
-                ĐĂNG THÔNG BÁO LÊN BẢNG ♡
+                {editingAnnId ? 'LƯU THAY ĐỔI ♡' : 'ĐĂNG THÔNG BÁO LÊN BẢNG ♡'}
               </button>
             </form>
           </div>
@@ -477,17 +580,349 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </p>
                   </div>
 
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleStartEditAnn(ann)}
+                      className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 cursor-pointer"
+                      title="Sửa thông báo"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteAnnouncement(ann.id)}
+                      className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer"
+                      title="Gỡ thông báo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CATEGORIES & TAGS MANAGEMENT */}
+      {activeAdminTab === 'categories_tags' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Categories Section */}
+          <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-[#E8DFF3] p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#F1EBF9]">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#8E75B2]" />
+                <h3 className="font-heading font-bold text-sm text-[#4A3C56]">
+                  Thể Loại Nhân Vật ({categories.length})
+                </h3>
+              </div>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newCatInput.trim()) return;
+                onAddCategory?.(newCatInput.trim());
+                setNewCatInput('');
+              }}
+              className="flex items-center gap-2"
+            >
+              <input
+                type="text"
+                placeholder="Thêm thể loại mới (vd: Huyễn Tưởng, Tiên Hiệp)..."
+                value={newCatInput}
+                onChange={(e) => setNewCatInput(e.target.value)}
+                className="flex-1 px-3 py-2 text-xs rounded-xl bg-[#FFF0F5]/50 border border-[#E8DFF3] text-[#4A3C56] focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-[#8E75B2] hover:bg-[#7D64A3] text-white text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" /> Thêm
+              </button>
+            </form>
+
+            <div className="flex flex-wrap gap-2 max-h-80 overflow-y-auto pt-1">
+              {categories.map((cat) => (
+                <div
+                  key={cat}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FAF4FE] border border-[#D2C8F2] text-xs font-semibold text-[#4A3C56] group hover:border-[#8E75B2] transition-colors"
+                >
+                  <span>{cat}</span>
                   <button
-                    onClick={() => onDeleteAnnouncement(ann.id)}
-                    className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 cursor-pointer"
-                    title="Gỡ thông báo"
+                    type="button"
+                    onClick={() => onDeleteCategory?.(cat)}
+                    className="p-0.5 text-gray-400 hover:text-rose-500 rounded-full cursor-pointer transition-colors"
+                    title={`Xóa thể loại ${cat}`}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Tags Section */}
+          <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-[#E8DFF3] p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#F1EBF9]">
+              <div className="flex items-center gap-2">
+                <Tag className="w-4 h-4 text-[#E2799F]" />
+                <h3 className="font-heading font-bold text-sm text-[#4A3C56]">
+                  Nhãn Tags Nhân Vật ({customTags.length})
+                </h3>
+              </div>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newTagInput.trim()) return;
+                onAddTag?.(newTagInput.trim());
+                setNewTagInput('');
+              }}
+              className="flex items-center gap-2"
+            >
+              <input
+                type="text"
+                placeholder="Thêm nhãn tag mới (vd: #Tsundere, #CunCon)..."
+                value={newTagInput}
+                onChange={(e) => setNewTagInput(e.target.value)}
+                className="flex-1 px-3 py-2 text-xs rounded-xl bg-[#FFF0F5]/50 border border-[#E8DFF3] text-[#4A3C56] focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-[#E2799F] hover:bg-[#D0658D] text-white text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" /> Thêm Tag
+              </button>
+            </form>
+
+            <div className="flex flex-wrap gap-2 max-h-80 overflow-y-auto pt-1">
+              {customTags.map((tag) => (
+                <div
+                  key={tag}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFF0F5] border border-[#FCD3E2] text-xs font-semibold text-[#8E75B2] group hover:border-[#E2799F] transition-colors"
+                >
+                  <span>{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteTag?.(tag)}
+                    className="p-0.5 text-gray-400 hover:text-rose-500 rounded-full cursor-pointer transition-colors"
+                    title={`Xóa tag ${tag}`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MUSIC PLAYLIST MANAGEMENT */}
+      {activeAdminTab === 'music' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white/90 p-5 rounded-3xl border border-[#E8DFF3] shadow-xs">
+            <div>
+              <h3 className="font-heading font-bold text-base text-[#4A3C56] flex items-center gap-2">
+                <Music className="w-5 h-5 text-[#8E75B2]" />
+                <span>Danh Sách Phát Nhạc Của Lớp ({playlist.length} bài)</span>
+              </h3>
+              <p className="text-xs text-[#827290] font-luxury italic">
+                Cô giáo có thể xóa các bài nhạc không phù hợp, thêm bài hát mới và thay đổi nhạc nền
+              </p>
+            </div>
+            <button
+              onClick={() => setShowAddMusicModal(true)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#8E75B2] to-[#E2799F] text-white text-xs font-bold shadow-xs hover:scale-102 transition-transform flex items-center gap-1.5 cursor-pointer font-heading"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Thêm Bài Hát Mới</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {playlist.map((track) => {
+              const isCurrent = currentTrack?.id === track.id;
+              return (
+                <div
+                  key={track.id}
+                  className={`p-4 rounded-3xl border transition-all flex flex-col justify-between gap-3 bg-white ${
+                    isCurrent ? 'border-[#8E75B2] shadow-md ring-2 ring-[#E9DCF8]' : 'border-[#E8DFF3] hover:border-[#8E75B2]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={track.coverUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=150&auto=format&fit=crop&q=80'}
+                      alt={track.title}
+                      className="w-12 h-12 rounded-2xl object-cover border border-[#D2C8F2] shadow-2xs shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-heading font-bold text-xs text-[#4A3C56] truncate">
+                        {track.title}
+                      </h4>
+                      <p className="text-[11px] text-[#827290] truncate">
+                        {track.artist}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[9px] bg-[#FAF4FE] text-[#8E75B2] font-bold px-2 py-0.5 rounded-full border border-[#D2C8F2]">
+                          {track.category || 'Lớp học'}
+                        </span>
+                        <span className="text-[9px] text-gray-400">
+                          {track.duration || '03:00'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#F1EBF9]">
+                    <button
+                      onClick={() => {
+                        selectTrack(track);
+                        if (!isPlaying || !isCurrent) togglePlay();
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors ${
+                        isCurrent && isPlaying
+                          ? 'bg-[#8E75B2] text-white shadow-xs'
+                          : 'bg-[#FAF4FE] hover:bg-[#E9DCF8] text-[#8E75B2]'
+                      }`}
+                    >
+                      {isCurrent && isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                      <span>{isCurrent && isPlaying ? 'Đang phát' : 'Nghe thử'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (confirm(`Cô giáo có chắc chắn muốn xóa bài "${track.title}" khỏi danh sách phát không?`)) {
+                          removeTrack(track.id);
+                        }
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl text-rose-500 hover:bg-rose-50 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Xóa bài hát"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Xóa</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Modal Thêm Nhạc Mới */}
+          {showAddMusicModal && (
+            <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl border border-[#D2C8F2] p-6 max-w-md w-full shadow-2xl space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#F1EBF9]">
+                  <h3 className="font-heading font-bold text-base text-[#4A3C56] flex items-center gap-2">
+                    <Music className="w-4 h-4 text-[#8E75B2]" />
+                    <span>Thêm Bài Hát Mới Vào Playlist</span>
+                  </h3>
+                  <button
+                    onClick={() => setShowAddMusicModal(false)}
+                    className="p-1 rounded-full text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newTrackTitle.trim()) return;
+                    const newTrack: MusicTrack = {
+                      id: `track-${Date.now()}`,
+                      title: newTrackTitle.trim(),
+                      artist: newTrackArtist.trim() || 'Cô Giáo Rắn Con',
+                      youtubeUrl: newTrackUrl.trim() || undefined,
+                      category: newTrackCategory,
+                      duration: newTrackDuration,
+                      coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300&auto=format&fit=crop&q=80',
+                      synthTheme: 'classroom',
+                      order: playlist.length + 1
+                    };
+                    addTrackToPlaylist(newTrack);
+                    setShowAddMusicModal(false);
+                    setNewTrackTitle('');
+                    setNewTrackUrl('');
+                  }}
+                  className="space-y-3 text-xs"
+                >
+                  <div>
+                    <label className="block font-bold text-[#4A3C56] mb-1">Tên bài hát:</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Giai Điệu Tuổi Thơ..."
+                      value={newTrackTitle}
+                      onChange={(e) => setNewTrackTitle(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-[#4A3C56] mb-1">Nghệ sĩ / Ca sĩ:</label>
+                    <input
+                      type="text"
+                      placeholder="Cô Giáo Rắn Con..."
+                      value={newTrackArtist}
+                      onChange={(e) => setNewTrackArtist(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-[#4A3C56] mb-1">Link YouTube (URL) hoặc để trống để dùng nhạc synth:</label>
+                    <input
+                      type="text"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      value={newTrackUrl}
+                      onChange={(e) => setNewTrackUrl(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-bold text-[#4A3C56] mb-1">Thể loại:</label>
+                      <select
+                        value={newTrackCategory}
+                        onChange={(e) => setNewTrackCategory(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+                      >
+                        <option value="Lớp học">Lớp học</option>
+                        <option value="Thư giãn">Thư giãn</option>
+                        <option value="Vui nhộn">Vui nhộn</option>
+                        <option value="Chuông trường">Chuông trường</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-bold text-[#4A3C56] mb-1">Thời lượng:</label>
+                      <input
+                        type="text"
+                        placeholder="03:00"
+                        value={newTrackDuration}
+                        onChange={(e) => setNewTrackDuration(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF4FE] border border-[#D2C8F2] text-[#4A3C56] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-[#F1EBF9]">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddMusicModal(false)}
+                      className="px-4 py-2 rounded-xl text-gray-500 font-bold"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-[#8E75B2] hover:bg-[#7D64A3] text-white font-bold cursor-pointer"
+                    >
+                      Thêm Vào Playlist
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -557,11 +992,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
 
               <div>
-                <label className="block font-bold text-[#62566F] mb-1">Ảnh đại diện nhân vật (URL):</label>
+                <label className="font-bold text-[#62566F] mb-1 flex items-center justify-between">
+                  <span>Ảnh đại diện nhân vật:</span>
+                  <label className="text-[10px] bg-[#E9E2FA] hover:bg-[#D2C8F2] text-[#62566F] font-bold px-2 py-0.5 rounded-lg cursor-pointer transition-colors flex items-center gap-1">
+                    <span>📁 Tải ảnh từ máy</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 500 * 1024) {
+                            alert('Ảnh quá lớn! Vui lòng chọn ảnh dưới 500KB nhé ♡');
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            if (typeof reader.result === 'string') {
+                              setCharAvatar(reader.result);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </label>
                 <input
                   type="text"
                   value={charAvatar}
                   onChange={(e) => setCharAvatar(e.target.value)}
+                  placeholder="https://... hoặc đã tải từ máy"
                   className="w-full px-3 py-2 rounded-xl bg-[#FFF0F5]/50 border border-[#E8DFF3] text-[#62566F] focus:outline-none"
                   required
                 />

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, addDoc, updateDoc, arrayUnion, query, where, onSnapshot } from 'firebase/firestore';
-import { auth, db, signInWithPopup, googleProvider, fbSignOut } from '../lib/firebase';
+import { auth, db, signInWithPopup, googleProvider, fbSignOut, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, PlantedFlower, FriendRequest, AppNotification } from '../types';
 import { soundManager } from '../lib/sound';
 
@@ -11,7 +11,6 @@ interface AuthContextType {
   isAdmin: boolean;
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
-  loginWithAdminPasscode: (adminId: string, pass: string) => boolean;
   logout: () => Promise<void>;
   updateProfileData: (data: Partial<UserProfile>) => Promise<void>;
   toggleFavorite: (characterId: string) => void;
@@ -34,15 +33,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let profileUnsubscribe: (() => void) | null = null;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (profileUnsubscribe) {
+        profileUnsubscribe();
+        profileUnsubscribe = null;
+      }
+
       setCurrentUser(user);
       if (user) {
         const userIsAdmin = user.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim();
 
-        try {
-          const profileDoc = await getDoc(doc(db, 'profiles', user.uid));
-          if (profileDoc.exists()) {
-            const data = profileDoc.data() as UserProfile;
+        // Subscribe to profile changes in real-time
+        profileUnsubscribe = onSnapshot(doc(db, 'profiles', user.uid), (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data() as UserProfile;
             const merged: UserProfile = {
               ...data,
               coins: data.coins ?? 200,
@@ -52,6 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(merged);
             setIsAdmin(userIsAdmin || data.role === 'admin');
           } else {
+            // Create initial profile if doesn't exist
             const newProfile: UserProfile = {
               uid: user.uid,
               displayName: userIsAdmin ? 'Cô Giáo Rắn Con (Admin)' : (user.displayName || 'Bé Mầm Non Mới'),
@@ -65,33 +72,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               favorites: [],
               createdAt: new Date().toISOString()
             };
-            await setDoc(doc(db, 'profiles', user.uid), newProfile);
-            setProfile(newProfile);
-            setIsAdmin(userIsAdmin);
+            setDoc(doc(db, 'profiles', user.uid), newProfile);
+            // No need to setProfile here as the snapshot will trigger
           }
-        } catch (err) {
-          console.warn('Error reading user profile:', err);
-        }
+        }, (err) => {
+          handleFirestoreError(err, OperationType.LIST, `profiles/${user.uid}`);
+        });
+
       } else {
-        const cachedAdmin = localStorage.getItem('mnrc_admin_session');
-        if (cachedAdmin) {
-          try {
-            const parsed = JSON.parse(cachedAdmin);
-            setProfile(parsed);
-            setIsAdmin(true);
-          } catch (e) {
-            setProfile(null);
-            setIsAdmin(false);
-          }
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
-        }
+        setProfile(null);
+        setIsAdmin(false);
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (profileUnsubscribe) profileUnsubscribe();
+    };
   }, []);
 
   const loginWithGoogle = async () => {
@@ -103,35 +101,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-
-  const loginWithAdminPasscode = (adminId: string, pass: string): boolean => {
-    soundManager.playMagicChime();
-    if (adminId.trim() === '23082010' && pass.trim() === 'Gàcon23082010') {
-      const adminProfile: UserProfile = {
-        uid: 'admin-teacher-master',
-        displayName: 'Cô Giáo Rắn Con (Admin)',
-        photoURL: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
-        bio: 'Giáo viên phụ trách lớp Mầm Non Rắn Con ♡',
-        role: 'admin',
-        coins: 99999,
-        friends: [],
-        plantedFlowers: [],
-        stickers: ['stk-snake', 'stk-star', 'stk-candy'],
-        favorites: [],
-        createdAt: new Date().toISOString()
-      };
-      setProfile(adminProfile);
-      setIsAdmin(true);
-      localStorage.setItem('mnrc_admin_session', JSON.stringify(adminProfile));
-      return true;
-    }
-    return false;
-  };
-
   const logout = async () => {
     soundManager.playBoop();
     localStorage.removeItem('mnrc_demo_profile');
-    localStorage.removeItem('mnrc_admin_session');
     try {
       await fbSignOut(auth);
     } catch (e) {}
@@ -143,14 +115,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!profile) return;
     const updated = { ...profile, ...data, updatedAt: new Date().toISOString() };
     setProfile(updated);
-    if (currentUser) {
+    
+    // Always persist to Firestore
+    const targetUid = currentUser?.uid || profile.uid;
+    if (targetUid) {
       try {
-        await setDoc(doc(db, 'profiles', currentUser.uid), updated, { merge: true });
+        await setDoc(doc(db, 'profiles', targetUid), updated, { merge: true });
+      } catch (err) {
+        console.warn('Could not sync profile to Firestore:', err);
+      }
+    }
+
+    if (isAdmin) {
+      try {
+        localStorage.setItem('mnrc_admin_session', JSON.stringify(updated));
       } catch (e) {}
-    } else if (isAdmin) {
-      localStorage.setItem('mnrc_admin_session', JSON.stringify(updated));
     } else {
-      localStorage.setItem('mnrc_demo_profile', JSON.stringify(updated));
+      try {
+        localStorage.setItem('mnrc_demo_profile', JSON.stringify(updated));
+      } catch (e) {}
     }
   };
 
@@ -175,7 +158,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: new Date().toISOString()
     };
 
-    const docRef = await addDoc(collection(db, 'friendRequests'), request);
+    let docRef;
+    try {
+      docRef = await addDoc(collection(db, 'friendRequests'), request);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, 'friendRequests');
+      return;
+    }
     
     // Add notification for the recipient
     const notif: Omit<AppNotification, 'id'> = {
@@ -187,7 +176,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isRead: false,
       createdAt: new Date().toISOString()
     };
-    await addDoc(collection(db, 'notifications'), notif);
+    try {
+      await addDoc(collection(db, 'notifications'), notif);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, 'notifications');
+    }
   };
 
   const acceptFriendRequest = async (requestId: string) => {
@@ -250,7 +243,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         loading,
         loginWithGoogle,
-        loginWithAdminPasscode,
         logout,
         updateProfileData,
         toggleFavorite,

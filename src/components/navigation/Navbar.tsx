@@ -52,8 +52,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const navItems = [
     { id: 'home', label: 'Trang chủ', icon: Home },
     { id: 'library', label: 'Tủ nhân vật', icon: BookOpen },
-    { id: 'ranking', label: 'Bé ngoan', icon: Trophy },
-    { id: 'random', label: 'Bé Chồng', icon: Sparkles },
+    { id: 'ranking', label: 'BXH Bé Chồng', icon: Trophy },
+    { id: 'random', label: 'Bốc Duyên Phận', icon: Sparkles },
     { id: 'entertainment', label: 'Góc vui chơi', icon: Gamepad2 },
     { id: 'music', label: 'Âm nhạc', icon: Music },
     { id: 'community', label: 'Bảng tin lớp', icon: MessageSquare },

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { soundManager } from '../../lib/sound';
 
@@ -29,9 +29,18 @@ export const FloatingDecorations: React.FC = () => {
     { id: 5, x: 88, size: 28, duration: 22, delay: 1 },
   ]);
 
-  // Generate gentle pastel snowflakes
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Generate gentle pastel snowflakes - actually disabled in JSX but keeping type for safety
   const snowflakes = useMemo<Snowflake[]>(() => {
-    return Array.from({ length: 42 }).map((_, i) => ({
+    const count = isMobile ? 10 : 42;
+    return Array.from({ length: count }).map((_, i) => ({
       id: i,
       x: Math.floor(Math.random() * 100),
       size: Math.floor(Math.random() * 5) + 3,
@@ -40,7 +49,7 @@ export const FloatingDecorations: React.FC = () => {
       delay: Math.random() * 15,
       sway: Math.floor(Math.random() * 30) - 15,
     }));
-  }, []);
+  }, [isMobile]);
 
   const popBubble = (id: number) => {
     soundManager.playPop();
@@ -61,63 +70,41 @@ export const FloatingDecorations: React.FC = () => {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-      {/* Dynamic Animated Ambient Glowing Orbs: Lavender -> Blush Pink -> Champagne */}
-      <motion.div
-        className="absolute -top-24 -left-24 w-[520px] h-[520px] rounded-full bg-gradient-to-br from-[#E0D4F7]/40 via-[#F3E8FF]/30 to-transparent blur-3xl"
-        animate={{
-          x: [0, 80, -40, 0],
-          y: [0, 60, -30, 0],
-          scale: [1, 1.12, 0.95, 1],
-        }}
-        transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
-      />
+      {!isMobile && (
+        <>
+          {/* Dynamic Animated Ambient Glowing Orbs: Lavender -> Blush Pink -> Champagne */}
+          {/* ONLY ON DESKTOP: These are very expensive for mobile GPUs */}
+          <motion.div
+            className="absolute -top-24 -left-24 w-[520px] h-[520px] rounded-full bg-gradient-to-br from-[#E0D4F7]/40 via-[#F3E8FF]/30 to-transparent blur-3xl"
+            animate={{
+              x: [0, 80, -40, 0],
+              y: [0, 60, -30, 0],
+              scale: [1, 1.12, 0.95, 1],
+            }}
+            transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+          />
 
-      <motion.div
-        className="absolute top-1/3 -right-28 w-[580px] h-[580px] rounded-full bg-gradient-to-bl from-[#FDE2EC]/45 via-[#FFF1F6]/35 to-transparent blur-3xl"
-        animate={{
-          x: [0, -60, 40, 0],
-          y: [0, -80, 50, 0],
-          scale: [1, 0.92, 1.1, 1],
-        }}
-        transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut' }}
-      />
+          <motion.div
+            className="absolute top-1/3 -right-28 w-[580px] h-[580px] rounded-full bg-gradient-to-bl from-[#FDE2EC]/45 via-[#FFF1F6]/35 to-transparent blur-3xl"
+            animate={{
+              x: [0, -60, 40, 0],
+              y: [0, -80, 50, 0],
+              scale: [1, 0.92, 1.1, 1],
+            }}
+            transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut' }}
+          />
 
-      <motion.div
-        className="absolute -bottom-32 left-1/4 w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-[#FEF3DC]/40 via-[#FFF9EE]/30 to-transparent blur-3xl"
-        animate={{
-          x: [0, 70, -50, 0],
-          y: [0, -50, 40, 0],
-          scale: [1, 1.08, 0.94, 1],
-        }}
-        transition={{ duration: 24, repeat: Infinity, ease: 'easeInOut' }}
-      />
-
-      {/* Gentle Falling Snowflakes (Tuyết rơi nhẹ nhẹ mộng mơ) */}
-      {snowflakes.map((flake) => (
-        <motion.div
-          key={flake.id}
-          className="absolute rounded-full pointer-events-none shadow-xs"
-          style={{
-            left: `${flake.x}%`,
-            width: `${flake.size}px`,
-            height: `${flake.size}px`,
-            backgroundColor: 'rgba(255, 255, 255, 0.85)',
-            boxShadow: '0 0 6px rgba(255, 255, 255, 0.8)',
-          }}
-          initial={{ y: -30, opacity: 0 }}
-          animate={{
-            y: ['0vh', '105vh'],
-            x: [0, flake.sway, -flake.sway, 0],
-            opacity: [0, flake.opacity, flake.opacity * 0.9, 0],
-          }}
-          transition={{
-            duration: flake.duration,
-            repeat: Infinity,
-            delay: flake.delay,
-            ease: 'linear',
-          }}
-        />
-      ))}
+          <motion.div
+            className="absolute -bottom-32 left-1/4 w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-[#FEF3DC]/40 via-[#FFF9EE]/30 to-transparent blur-3xl"
+            animate={{
+              x: [0, 70, -50, 0],
+              y: [0, -50, 40, 0],
+              scale: [1, 1.08, 0.94, 1],
+            }}
+            transition={{ duration: 24, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </>
+      )}
 
       {/* Subtle Ethereal Stardust Sparkles */}
       <div className="absolute top-1/4 left-1/6 opacity-40 animate-pulse">
@@ -138,8 +125,8 @@ export const FloatingDecorations: React.FC = () => {
         </svg>
       </div>
 
-      {/* Interactive Poppable Translucent Liquid Glass Bubbles */}
-      {bubbles.map((b) => (
+      {/* Interactive Poppable Translucent Liquid Glass Bubbles - Only on desktop */}
+      {!isMobile && bubbles.map((b) => (
         <motion.div
           key={b.id}
           className="absolute bottom-0 pointer-events-auto cursor-pointer"

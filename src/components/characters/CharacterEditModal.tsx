@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Save, Image, Tag, User, BookOpen, ExternalLink, Trash2, Heart, Check } from 'lucide-react';
 import { Character, CharacterCategory } from '../../types';
 import { soundManager } from '../../lib/sound';
+import { compressImageFile } from '../../lib/imageCompressor';
 
 interface CharacterEditModalProps {
   isOpen: boolean;
@@ -206,16 +207,15 @@ export const CharacterEditModal: React.FC<CharacterEditModalProps> = ({
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              if (typeof reader.result === 'string') {
-                                setAvatarUrl(reader.result);
-                              }
-                            };
-                            reader.readAsDataURL(file);
+                            try {
+                              const dataUrl = await compressImageFile(file);
+                              if (dataUrl) setAvatarUrl(dataUrl);
+                            } catch (err) {
+                              console.warn('Image error:', err);
+                            }
                           }
                         }}
                       />
@@ -243,16 +243,15 @@ export const CharacterEditModal: React.FC<CharacterEditModalProps> = ({
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              if (typeof reader.result === 'string') {
-                                setCoverUrl(reader.result);
-                              }
-                            };
-                            reader.readAsDataURL(file);
+                            try {
+                              const dataUrl = await compressImageFile(file);
+                              if (dataUrl) setCoverUrl(dataUrl);
+                            } catch (err) {
+                              console.warn('Image error:', err);
+                            }
                           }
                         }}
                       />
