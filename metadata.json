@@ -1,0 +1,7 @@
+{
+  "name": "Mầm Non Rắn Con - GGAI Kindergarten",
+  "description": "Thư viện nhân vật và cộng đồng sáng tạo Google AI Studio phong cách mầm non pastel đáng yêu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

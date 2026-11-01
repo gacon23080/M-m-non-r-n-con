@@ -1,0 +1,305 @@
+{
+  "entities": {
+    "Character": {
+      "title": "Character",
+      "description": "A character in the kindergarten library created by AI Studio creators.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "creator": { "type": "string", "maxLength": 80 },
+        "shortDescription": { "type": "string", "maxLength": 300 },
+        "fullDescription": { "type": "string", "maxLength": 5000 },
+        "personality": { "type": "string", "maxLength": 1000 },
+        "backgroundStory": { "type": "string", "maxLength": 5000 },
+        "relationships": { "type": "string", "maxLength": 2000 },
+        "category": { "type": "string", "maxLength": 50 },
+        "tags": { "type": "array" },
+        "googleAiStudioUrl": { "type": "string", "maxLength": 500 },
+        "avatarUrl": { "type": "string", "maxLength": 1000 },
+        "coverUrl": { "type": "string", "maxLength": 1000 },
+        "gallery": { "type": "array" },
+        "likesCount": { "type": "number" },
+        "weeklyLikesCount": { "type": "number" },
+        "viewsCount": { "type": "number" },
+        "isFeatured": { "type": "boolean" },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["name", "creator", "shortDescription", "category", "isPublished", "createdAt"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Classroom bulletin board announcement.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "content": { "type": "string", "maxLength": 2000 },
+        "type": { "type": "string", "enum": ["event", "character", "update", "notice"] },
+        "isPinned": { "type": "boolean" },
+        "authorName": { "type": "string", "maxLength": 80 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "content", "type", "createdAt"]
+    },
+    "CommunityPost": {
+      "title": "CommunityPost",
+      "description": "Classroom sticky note community board post.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "authorId": { "type": "string", "maxLength": 128 },
+        "authorName": { "type": "string", "maxLength": 80 },
+        "authorAvatar": { "type": "string", "maxLength": 1000 },
+        "content": { "type": "string", "maxLength": 1000 },
+        "noteColor": { "type": "string", "maxLength": 20 },
+        "sticker": { "type": "string", "maxLength": 50 },
+        "likesCount": { "type": "number" },
+        "likedBy": { "type": "array" },
+        "repliesCount": { "type": "number" },
+        "isPinned": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["authorId", "authorName", "content", "createdAt"]
+    },
+    "CommunityReply": {
+      "title": "CommunityReply",
+      "description": "Reply to a community note.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "authorId": { "type": "string", "maxLength": 128 },
+        "authorName": { "type": "string", "maxLength": 80 },
+        "authorAvatar": { "type": "string", "maxLength": 1000 },
+        "content": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["authorId", "authorName", "content", "createdAt"]
+    },
+    "AnonymousMessage": {
+      "title": "AnonymousMessage",
+      "description": "Secret inbox submission from visitors or members.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "nickname": { "type": "string", "maxLength": 60 },
+        "message": { "type": "string", "maxLength": 2000 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "isPinned": { "type": "boolean" },
+        "reply": { "type": "string", "maxLength": 2000 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["message", "status", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public profile of a registered kindergarten member.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 80 },
+        "photoURL": { "type": "string", "maxLength": 1000 },
+        "bio": { "type": "string", "maxLength": 500 },
+        "role": { "type": "string", "enum": ["member", "admin"] },
+        "stickers": { "type": "array" },
+        "favorites": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "displayName", "createdAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Admin authorization entry.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["admin"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Vote": {
+      "title": "Vote",
+      "description": "Record of a weekly character vote by a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "characterId": { "type": "string", "maxLength": 128 },
+        "weeklyPeriodId": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "characterId", "weeklyPeriodId", "createdAt"]
+    },
+    "MusicTrack": {
+      "title": "MusicTrack",
+      "description": "Audio track available in the music room and background player.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 100 },
+        "artist": { "type": "string", "maxLength": 80 },
+        "audioUrl": { "type": "string", "maxLength": 1000 },
+        "coverUrl": { "type": "string", "maxLength": 1000 },
+        "category": { "type": "string", "maxLength": 50 },
+        "duration": { "type": "string", "maxLength": 20 },
+        "isDefault": { "type": "boolean" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "audioUrl", "category"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Direct message or group conversation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["direct", "group"] },
+        "participants": { "type": "array" },
+        "name": { "type": "string", "maxLength": 100 },
+        "avatarUrl": { "type": "string", "maxLength": 1000 },
+        "lastMessage": { "type": "string", "maxLength": 500 },
+        "lastMessageAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["type", "participants", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Individual message inside a conversation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "conversationId": { "type": "string", "maxLength": 128 },
+        "senderId": { "type": "string", "maxLength": 128 },
+        "senderName": { "type": "string", "maxLength": 80 },
+        "senderAvatar": { "type": "string", "maxLength": 1000 },
+        "text": { "type": "string", "maxLength": 1000 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "sticker": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["conversationId", "senderId", "senderName", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "In-app notification for a member.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "maxLength": 50 },
+        "title": { "type": "string", "maxLength": 100 },
+        "message": { "type": "string", "maxLength": 300 },
+        "link": { "type": "string", "maxLength": 500 },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "title", "message", "isRead", "createdAt"]
+    },
+    "LiveChatMessage": {
+      "title": "LiveChatMessage",
+      "description": "Message in the casino live chat channel.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "senderId": { "type": "string", "maxLength": 128 },
+        "senderName": { "type": "string", "maxLength": 80 },
+        "senderAvatar": { "type": "string", "maxLength": 1000 },
+        "text": { "type": "string", "maxLength": 1000 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "isBot": { "type": "boolean" },
+        "chartSummary": { "type": "object" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["senderName", "text", "createdAt"]
+    },
+    "GameSession": {
+      "title": "GameSession",
+      "description": "Active game round state (e.g., Tai Xiu betting period).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "gameType": { "type": "string", "enum": ["taixiu"] },
+        "status": { "type": "string", "enum": ["waiting", "betting", "result"] },
+        "betTimer": { "type": "number" },
+        "startedAt": { "type": "string" },
+        "expiresAt": { "type": "string" },
+        "lastDice": { "type": "array" },
+        "lastTotal": { "type": "number" }
+      },
+      "required": ["gameType", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/characters/{characterId}": {
+      "schema": "Character",
+      "description": "Published and draft character library entries."
+    },
+    "/announcements/{announcementId}": {
+      "schema": "Announcement",
+      "description": "Class bulletin board announcements."
+    },
+    "/communityPosts/{postId}": {
+      "schema": "CommunityPost",
+      "description": "Sticky notes on classroom community board."
+    },
+    "/communityPosts/{postId}/replies/{replyId}": {
+      "schema": "CommunityReply",
+      "description": "Replies to sticky note community posts."
+    },
+    "/anonymousMessages/{messageId}": {
+      "schema": "AnonymousMessage",
+      "description": "Secret inbox fan messages and questions."
+    },
+    "/profiles/{userId}": {
+      "schema": "UserProfile",
+      "description": "Member profile information."
+    },
+    "/admins/{userId}": {
+      "schema": "AdminRecord",
+      "description": "Authorized administrators."
+    },
+    "/votes/{voteId}": {
+      "schema": "Vote",
+      "description": "Weekly ranking votes."
+    },
+    "/musicTracks/{trackId}": {
+      "schema": "MusicTrack",
+      "description": "Music room playlist tracks."
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Messenger conversations."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Messages inside a conversation."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Member activity notifications."
+    },
+    "/gameResults/{resultId}": {
+      "schema": "GameResult",
+      "description": "Recent game outcomes for Tai Xiu and Bau Cua."
+    },
+    "/liveChatMessages/{msgId}": {
+      "schema": "LiveChatMessage",
+      "description": "Messages in the public casino chat."
+    },
+    "/gameSessions/{sessionId}": {
+      "schema": "GameSession",
+      "description": "Shared game state sessions."
+    }
+  }
+}

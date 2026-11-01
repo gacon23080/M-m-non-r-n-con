@@ -1,0 +1,1196 @@
+# MẦM NON RẮN CON — GGAI KINDERGARTEN
+
+## Complete Website Design & Development Specification
+
+Build a complete, responsive, animated character community website called **“Mầm Non Rắn Con” (GGAI Kindergarten)**.
+
+The website is a public character library and community platform for Google AI Studio character creators. Visitors can discover characters, explore character profiles, interact with the community, enjoy music and mini-games, and optionally create an account to use social features.
+
+The visual identity must be inspired by the layout structure and immersive experience of the provided Meimei Corner references, while maintaining a completely original kindergarten-themed identity.
+
+**IMPORTANT:** Do not reproduce the dark gothic aesthetic. Use the pastel kindergarten visual direction described below.
+
+---
+
+# 1. VISUAL IDENTITY & DESIGN SYSTEM
+
+## 1.1. Overall Art Direction
+
+Create an elegant, dreamy, soft pastel kindergarten environment.
+
+The website should feel like entering a beautiful illustrated kindergarten filled with sunlight, flowers, clouds, butterflies, little toys, stationery, and a cute baby snake mascot.
+
+The interface must be visually rich, polished, and carefully composed. Avoid making it look like a generic admin dashboard, an ordinary blog, or a basic character listing website.
+
+Use a combination of:
+
+- Soft pastel colors.
+- Rounded glass-like cards.
+- Delicate borders and subtle shadows.
+- Illustrated classroom decorations.
+- Animated environmental elements.
+- Cute but refined typography.
+- Smooth page transitions.
+- Small interactive details.
+
+The design should be cute, sophisticated, clean, and comfortable for long browsing sessions.
+
+## 1.2. Color Palette
+
+Use these colors as the primary design system:
+
+- Primary lavender: `#D2C8F2`
+- Soft pink: `#FCD3E2`
+- Warm cream: `#FCF0DB`
+- Light lavender: `#E9E2FA`
+- Pale pink: `#FFF0F5`
+- White: `#FFFFFF`
+- Main text: `#62566F`
+- Secondary text: `#93879E`
+- Soft purple accent: `#A594D6`
+- Border: `#E8DFF3`
+
+Suggested background gradient:
+
+`linear-gradient(135deg, #D2C8F2 0%, #FCD3E2 52%, #FCF0DB 100%)`
+
+Use cream and white for content surfaces, lavender for primary buttons, and pink for highlights.
+
+Avoid excessive saturation, harsh black backgrounds, strong neon colors, or overly dark shadows.
+
+## 1.3. Typography
+
+Use a combination of:
+
+- Fredoka for playful headings and section titles.
+- Nunito for body text and UI elements.
+- Comfortaa for decorative labels and short captions.
+
+Use Vietnamese diacritics correctly across the entire website.
+
+## 1.4. Mascot and Decorative Elements
+
+Create an original lavender baby snake mascot.
+
+Appearance:
+
+- Soft lavender body.
+- Tiny pink bow.
+- Round expressive eyes.
+- Rosy cheeks.
+- Small schoolbag.
+- Friendly, playful facial expressions.
+
+The mascot should appear throughout the website in different poses:
+
+- Greeting visitors at the entrance.
+- Sitting beside the search bar.
+- Holding a bulletin board.
+- Sleeping near the music player.
+- Celebrating weekly winners.
+- Holding a gift box.
+- Appearing in empty states and loading animations.
+
+Decorative elements:
+
+- Floating clouds.
+- Small butterflies.
+- Tiny stars and hearts.
+- Flowers and leaves.
+- Pencil drawings.
+- Paper airplanes.
+- Bubbles.
+- Floating school supplies.
+- Cute classroom stickers.
+
+Decorations should move gently and must never obstruct text or important controls.
+
+---
+
+# 2. WEBSITE STRUCTURE & LAYOUT
+
+The website must follow a visually organized composition inspired by the provided references.
+
+Do not put every feature into one long navigation bar.
+
+Use distinct visual sections, balanced columns, floating utilities, and a central content area.
+
+## 2.1. Page Layout
+
+Desktop layout:
+
+- Top: Main logo and welcome area.
+- Left column: Creator information, quick links, school information.
+- Center column: Main content, announcements, search, featured characters.
+- Right column: Weekly ranking, random character, popular tags, featured creators.
+- Floating utilities: Music player and quick-access buttons.
+- Lower sections: Character library, entertainment center, community, inbox, and other features.
+
+The layout should be responsive and rearrange naturally on tablets and mobile devices.
+
+## 2.2. Main Navigation
+
+Create a compact navigation system with cute illustrated icons.
+
+Main sections:
+
+- Trang chủ
+- Tủ nhân vật
+- Bé ngoan trong tuần
+- Bé Chồng Hôm Nay
+- Góc vui chơi
+- Phòng âm nhạc
+- Bảng tin lớp
+- Hòm thư bí mật
+
+Member account and admin access should be visually separated from the main navigation.
+
+Use a sticky or floating navigation system that remains accessible while scrolling.
+
+---
+
+# 3. ANIMATED ENTRANCE PAGE — CỔNG TRƯỜNG
+
+Create a dedicated welcome screen before entering the main website.
+
+The entrance should look like a pastel illustrated kindergarten.
+
+Visual elements:
+
+- A beautiful school building in lavender and cream.
+- A pastel school gate.
+- A garden with flowers.
+- Small trees and butterflies.
+- Floating clouds.
+- A little lavender snake mascot standing near the entrance.
+- A school sign reading “MẦM NON RẮN CON”.
+
+Animation sequence:
+
+1. The school environment gradually appears.
+
+2. Clouds drift slowly across the sky.
+
+3. Flowers and leaves sway gently.
+
+4. Butterflies fly around the garden.
+
+5. The baby snake mascot waves at the visitor.
+
+6. A school bell rings: “Tùng! Tùng! Tùng!”
+
+7. Display the welcome message:
+
+   “TING TING! ĐÃ ĐẾN GIỜ VÀO LỚP RỒI CÁC BÉ ƠI!”
+
+8. Display a large rounded button:
+
+   “VÀO LỚP THÔI! ♡”
+
+9. When clicked, the school gate opens and the visitor transitions smoothly into the main website.
+
+Audio must only begin after a user interaction to respect browser autoplay restrictions.
+
+Include:
+
+- Skip entrance animation.
+- Sound on/off.
+- Reduced-motion support.
+- A remembered entrance preference where appropriate.
+
+---
+
+# 4. HOMEPAGE — LỚP HỌC RẮN CON
+
+The homepage is the main visual centerpiece.
+
+It should resemble a beautiful pastel classroom bulletin board.
+
+## 4.1. Header and Logo
+
+Place the logo in the center of the upper area.
+
+Logo:
+“Mầm Non Rắn Con”
+
+Subtitle:
+“Góc nhỏ dành cho những chiếc char đáng yêu ♡”
+
+Use a playful, elegant font with a subtle lavender glow or soft shadow.
+
+Add:
+
+- A small mascot illustration.
+- A welcome message.
+- A member profile icon.
+- A compact navigation menu.
+- A notification icon.
+
+## 4.2. Three-Column Homepage Composition
+
+Use a balanced three-column desktop layout.
+
+### LEFT COLUMN — GÓC CỦA CÔ GIÁO
+
+Create a rounded pastel card containing:
+
+- Creator avatar.
+- Creator name.
+- Short introduction.
+- Social media links.
+- Google AI Studio creator links.
+- Facebook page.
+- Other platforms.
+- Website introduction.
+- Small decorative quote.
+
+Section title:
+“Góc Sáng Tạo ♡”
+
+Each external link should appear as a small rounded card with an icon and hover animation.
+
+The admin must be able to edit all profile information and links.
+
+### CENTER COLUMN — BẢNG TIN LỚP HỌC
+
+This is the most important section.
+
+At the top, display a large classroom bulletin board card.
+
+Title:
+“BẢNG TIN LỚP RẮN CON”
+
+Inside the board, display:
+
+- Important announcements.
+- New character releases.
+- Weekly events.
+- Community notices.
+- Website updates.
+
+Each announcement should have a cute icon, title, date, and short content.
+
+Below the bulletin board, place:
+
+**Character Search Bar**
+
+A large rounded search field with:
+
+- Search icon.
+- Placeholder: “Tìm kiếm những chiếc char đáng yêu...”
+- Category filter.
+- Tag filter.
+- Creator filter.
+- Clear search button.
+
+Below the search bar, display a horizontally scrolling announcement ticker.
+
+Use a pastel pink or lavender background with a tiny school bell icon.
+
+### RIGHT COLUMN — GÓC BÉ NGOAN
+
+Create several vertically stacked cards:
+
+1. **Bé ngoan trong tuần**
+
+   - Display the current top three characters.
+   - Show their images and weekly likes.
+   - Include a “Xem bảng xếp hạng” link.
+
+2. **Bé Chồng Hôm Nay**
+
+   - A cute random-character widget.
+   - Display a small mystery character illustration.
+   - Button: “Bốc một bé ♡”
+
+3. **Khẩu vị của lớp**
+
+   - Display popular character tags.
+   - Example: #Tsundere, #GoldenRetriever, #CEO, #Historical, #Fantasy.
+
+4. **Những chiếc char nổi bật**
+
+   - Small circular character avatars.
+   - Click to open character details.
+
+The right column should remain visually compact and must not compete with the central content.
+
+## 4.3. Featured Characters
+
+Below the three-column section, create a large featured character area.
+
+Section heading:
+“NHỮNG BÉ ĐANG ĐƯỢC YÊU THÍCH ♡”
+
+Display character cards in a responsive grid.
+
+Each card includes:
+
+- Character image.
+- Character name.
+- Creator name.
+- Short description.
+- Category.
+- Tags.
+- Like count.
+- View count.
+- Featured badge where applicable.
+
+Card design:
+
+- White or warm cream surface.
+- Rounded corners.
+- Thin lavender border.
+- Soft shadow.
+- Subtle hover lift.
+- Image zoom on hover.
+- Small floating heart animation when liked.
+
+Use consistent image proportions and avoid distorted images.
+
+Buttons:
+
+- “Khám phá thêm”
+- “Xem tất cả nhân vật”
+
+---
+
+# 5. CHARACTER LIBRARY — TỦ NHÂN VẬT
+
+Create a dedicated character library page.
+
+Page title:
+“TỦ NHÂN VẬT RẮN CON”
+
+Subtitle:
+“Nơi những câu chuyện nhỏ được bắt đầu.”
+
+## 5.1. Categories
+
+Provide the following categories:
+
+- Hiện đại
+- Cổ trang
+- Học đường
+- Tổng tài
+- Fantasy
+- Anime
+- Kinh dị
+- Đời thường
+- Thanh xuân
+- Boylove
+- Girllove
+- Original Characters
+- Khác
+
+## 5.2. Tags
+
+Examples:
+
+- \#Tsundere
+- \#Leader
+- \#MainOC
+- \#Chibi
+- \#ColdMaleLead
+- \#GoldenRetriever
+- \#Romance
+- \#Historical
+- \#Fantasy
+- \#SchoolLife
+
+Admin can create, rename, reorder, and delete categories and tags.
+
+## 5.3. Search and Filters
+
+Support:
+
+- Character name search.
+- Creator search.
+- Category filtering.
+- Multiple tag filtering.
+- Newest first.
+- Most liked.
+- Most viewed.
+- Featured characters.
+- Random sorting.
+
+Use pagination or infinite scrolling with optimized data loading.
+
+## 5.4. Character Detail Page
+
+Each character has an individual detail page.
+
+Include:
+
+- Large character artwork.
+- Character name.
+- Creator.
+- Short introduction.
+- Full description.
+- Personality.
+- Background story.
+- Character relationships.
+- Gallery.
+- Tags and categories.
+- Google AI Studio link.
+- Like button.
+- Favorite button.
+- Share button.
+- View count.
+- Comments.
+
+Use a visually appealing profile layout with a large image and organized information cards.
+
+---
+
+# 6. WEEKLY RANKING — BÉ NGOAN TRONG TUẦN
+
+Create a dedicated ranking page.
+
+Title:
+“BẢNG VÀNG BÉ NGOAN TRONG TUẦN”
+
+Display three large podium cards.
+
+- Rank 1: Gold crown.
+- Rank 2: Silver star.
+- Rank 3: Bronze flower.
+
+Each podium displays:
+
+- Character artwork.
+- Name.
+- Creator.
+- Weekly likes.
+- Ranking position.
+
+Ranking must be calculated from valid likes within the current weekly period.
+
+Important:
+
+- Weekly likes must be separate from lifetime likes.
+- Prevent repeated votes by the same eligible visitor within the same weekly period.
+- Validate votes on the server.
+- Use Firebase Cloud Functions for vote processing.
+- Apply rate limits and abuse prevention.
+- Archive previous weekly rankings.
+- Allow admins to configure weekly start and end times.
+- Define tie-breaking rules.
+
+The admin can feature or exclude characters from the ranking.
+
+---
+
+# 7. RANDOM CHARACTER — BÉ CHỒNG HÔM NAY
+
+Create a playful character lottery section.
+
+Title
+”
+
+Display a large mystery card with the lavender snake mascot holding a question mark.
+
+When the visitor clicks the random button:
+
+- Play a short spinning animation.
+- Cycle through character card silhouettes.
+- Reveal one eligible published character.
+- Display character artwork, name, creator, description, category, and tags.
+- Provide a button to open the character detail page.
+- Provide the Google AI Studio link.
+- Allow another random draw.
+- Allow sharing.
+- Allow favoriting.
+- Save draw history for logged-in members.
+
+Random selection must be genuinely randomized among eligible characters.
+
+Admin can:
+
+- Include or exclude characters.
+- Restrict random draws by category.
+- Mark special characters.
+- Configure probability weights if desired.
+- Manage special event pools.
+
+---
+
+# 8. ENTERTAINMENT CENTER — SÂN CHƠI CỦA LỚP
+
+Create a dedicated entertainment page designed like a kindergarten playroom.
+
+Include:
+
+### 8.1. Lucky Wheel
+
+- Animated spinning wheel.
+- Configurable rewards and segments.
+- Admin-managed reward probabilities.
+- Daily or event-based limits.
+- Draw history.
+
+### 8.2. Bé Nào Hôm Nay?
+
+- Random character picker.
+- Cute reveal animation.
+
+### 8.3. Mystery Gift Box
+
+- A gift box that opens with animation.
+- Random character, sticker, greeting, or collectible reward.
+- Admin-managed gift pool.
+
+### 8.4. Quiz Corner
+
+- Admin-managed quizzes.
+- Multiple-choice questions.
+- Score calculation.
+- Results and leaderboard.
+
+### 8.5. Sticker Collection
+
+Create collectible stickers:
+
+- Baby snake.
+- Bear.
+- Bunny.
+- Cat.
+- Flowers.
+- Stars.
+- Hearts.
+- Weekly winner badges.
+
+Members can collect and view their stickers.
+
+### 8.6. Relaxation Corner
+
+- Rain sounds.
+- Nature sounds.
+- Gentle music.
+- Floating bubbles.
+- Stars.
+- Calm animated backgrounds.
+
+---
+
+# 9. MUSIC ROOM — PHÒNG ÂM NHẠC
+
+Create a music room with a floating persistent player.
+
+Player controls:
+
+- Play/pause.
+- Previous.
+- Next.
+- Volume.
+- Repeat.
+- Shuffle.
+- Playlist.
+- Album artwork.
+- Track title.
+- Progress bar.
+- Background music toggle.
+
+Music categories:
+
+- Classroom background.
+- Entrance music.
+- Relaxation.
+- Fun music.
+- Cartoon.
+- School bell.
+- Sound effects.
+
+Admin can:
+
+- Upload tracks.
+- Replace tracks.
+- Delete tracks.
+- Edit titles and descriptions.
+- Upload artwork.
+- Create playlists.
+- Set default music.
+- Configure volume preferences.
+- Reorder tracks.
+
+Store audio files in Firebase Storage.
+
+Only upload music and sound assets that the website is authorized to use.
+
+The player should remain accessible while navigating between pages without unnecessarily restarting playback.
+
+---
+
+# 10. ANONYMOUS INBOX — HÒM THƯ BÍ MẬT
+
+Create a dedicated anonymous message page.
+
+Title:
+“HÒM THƯ BÍ MẬT ♡”
+
+Visitors can anonymously submit:
+
+- Fan messages.
+- Questions.
+- Character suggestions.
+- Confessions.
+- Feedback.
+- General messages.
+
+Optional fields:
+
+- Nickname.
+- Message.
+- Image attachment.
+
+Anonymous display names can include:
+
+- Bé Rắn Con #001.
+- Một chiếc bé giấu tên.
+- A custom nickname.
+
+Submissions enter an admin moderation queue.
+
+Admin can:
+
+- Read.
+- Reply privately.
+- Approve.
+- Reject.
+- Delete.
+- Pin.
+- Feature.
+
+Only approved submissions appear on the public message wall.
+
+Keep public anonymity while maintaining basic server-side rate limits, file validation, and abuse-reporting controls.
+
+---
+
+# 11. COMMUNITY WALL — BẢNG TIN CỘNG ĐỒNG
+
+Create a community wall that resembles a classroom display board covered with pastel sticky notes.
+
+Members can:
+
+- Post text.
+- Upload images.
+- Add emojis.
+- Add stickers.
+- React to posts.
+- Reply to posts.
+- Report inappropriate content.
+
+Display options:
+
+- Newest.
+- Most liked.
+- Featured.
+
+Admin can:
+
+- Pin.
+- Hide.
+- Edit.
+- Delete.
+- Moderate.
+
+Use different pastel sticky-note styles while maintaining readable text and consistent spacing.
+
+---
+
+# 12. MEMBER ACCOUNTS
+
+Browsing and viewing published characters must not require an account.
+
+Registration is optional.
+
+Member profiles include:
+
+- Avatar.
+- Nickname.
+- Short biography.
+- Join date.
+- Favorite characters.
+- Sticker collection.
+- Random draw history.
+- Community activity.
+
+Allow members to edit their own profiles.
+
+Do not expose private information publicly.
+
+---
+
+# 13. MESSENGER — GÓC TRÒ CHUYỆN
+
+Create a real-time messaging system.
+
+IMPORTANT: Members must be able to send direct messages to other registered members immediately after creating an account.
+
+Friend approval must NOT be required before starting a conversation.
+
+Features:
+
+- Direct messaging.
+- Group conversations.
+- Text.
+- Emojis.
+- Stickers.
+- Image attachments.
+- Timestamps.
+- Sent status.
+- Read status.
+- Conversation history.
+- Search conversations.
+- Delete own messages.
+
+Group chat:
+
+- Create group.
+- Set group name.
+- Upload group avatar.
+- Add members.
+- Remove members.
+- Send messages and images.
+
+Optional friend system:
+
+- Search members.
+- Send friend requests.
+- Accept or reject requests.
+- Remove friends.
+- View profiles.
+
+Friendship is optional and must not restrict direct messaging.
+
+Desktop layout:
+
+- Conversation list on the left.
+- Active chat on the right.
+
+Mobile layout:
+
+- Full-screen conversation view.
+- Easy navigation back to conversation list.
+
+Add basic block, report, and spam controls.
+
+---
+
+# 14. NOTIFICATIONS
+
+Create a notification center for:
+
+- New direct messages.
+- Group messages.
+- Friend requests.
+- Comment replies.
+- Reactions.
+- New character releases.
+- Weekly rankings.
+- Admin announcements.
+
+Allow members to mark notifications as read.
+
+---
+
+# 15. ADMIN DASHBOARD — PHÒNG GIÁO VIÊN
+
+Create a protected admin dashboard at `/admin`.
+
+The dashboard must use the same pastel design system while remaining clear and functional.
+
+Admin permissions must be enforced server-side.
+
+## 15.1. Dashboard Overview
+
+Display:
+
+- Total characters.
+- Published characters.
+- Total lifetime likes.
+- Current weekly votes.
+- Registered members.
+- Total messages.
+- Pending anonymous submissions.
+- Character views.
+- Recent activity.
+
+## 15.2. Admin Navigation
+
+Provide management sections:
+
+1. Overview.
+2. Characters.
+3. Categories and tags.
+4. Weekly rankings.
+5. Random character settings.
+6. Music.
+7. Mini-games.
+8. Stickers.
+9. Anonymous inbox.
+10. Community posts.
+11. Comment moderation.
+12. Members.
+13. Announcements.
+14. Website appearance.
+15. Analytics.
+16. Admin activity logs.
+17. Backups and restore.
+
+## 15.3. Full Content Management
+
+Admin must have full control over website content.
+
+Character management:
+
+- Create.
+- Edit.
+- Delete.
+- Hide.
+- Publish.
+- Unpublish.
+- Restore.
+- Upload images.
+- Replace images.
+- Edit descriptions.
+- Manage tags and categories.
+- Set featured status.
+- Edit external links.
+
+Music management:
+
+- Upload.
+- Replace.
+- Edit.
+- Delete.
+- Reorder.
+- Manage playlists.
+
+Community management:
+
+- Moderate.
+- Pin.
+- Hide.
+- Delete.
+- Restore where appropriate.
+
+Admin must also be able to manage:
+
+- Rankings.
+- Announcements.
+- Games.
+- Stickers.
+- Members.
+- Website decorations.
+- Music settings.
+- Homepage layout and featured content.
+
+Require confirmation for destructive actions.
+
+Use autosave or clear save feedback where appropriate.
+
+---
+
+# 16. AUTHENTICATION & ADMIN SECURITY
+
+Use Firebase Authentication.
+
+Create a secure initial admin account using the credentials supplied by the website owner during deployment.
+
+IMPORTANT SECURITY REQUIREMENTS:
+
+- Never hardcode the admin password in frontend code.
+- Never expose credentials in public JavaScript bundles.
+- Use secure server-side authentication.
+- Use Firebase custom claims or another verified server-side role mechanism.
+- Only authorized admins can access admin operations.
+- Users must not be able to grant themselves admin privileges.
+- Include password change and logout functionality.
+- Protect admin routes and Firebase operations with security rules.
+- Store privileged secrets in secure environment variables or managed secrets.
+- Use password reset and recovery procedures.
+
+The initial admin password should be changed if it has been reused elsewhere.
+
+---
+
+# 17. BACKEND & DATABASE ARCHITECTURE
+
+Use the Firebase ecosystem:
+
+- Firebase Authentication.
+- Cloud Firestore.
+- Firebase Storage.
+- Firebase Cloud Functions.
+
+Frontend:
+
+- Next.js App Router.
+- TypeScript.
+- Tailwind CSS.
+- Framer Motion.
+- Lucide React.
+- React Hook Form.
+- Zod.
+- TanStack Query or appropriate React state management.
+
+Suggested Firestore collections:
+
+- characters
+- categories
+- tags
+- votes
+- weeklyPeriods
+- weeklyRankings
+- profiles
+- comments
+- anonymousMessages
+- communityPosts
+- conversations
+- messages
+- friendships
+- notifications
+- musicTracks
+- playlists
+- quizzes
+- stickers
+- userCollections
+- announcements
+- adminLogs
+
+Use subcollections for growing datasets such as messages and comments.
+
+Do not store unbounded conversation history inside one Firestore document.
+
+Use pagination, timestamps, appropriate indexes, and efficient queries.
+
+## 17.1. Firebase Security Rules
+
+- Public visitors can read published characters.
+- Only admins can create, update, delete, publish, or hide characters.
+- Only admins can manage music and announcements.
+- Members can edit their own profiles.
+- Members can only read conversations in which they participate.
+- Members can only edit or delete their own permitted messages.
+- Users cannot change their own admin role.
+- Votes must be validated by trusted server-side functions.
+- Validate uploaded file types and sizes.
+- Never expose Firebase Admin SDK credentials.
+
+---
+
+# 18. ANALYTICS & PERFORMANCE
+
+Track:
+
+- Character views.
+- Character likes.
+- Weekly votes.
+- Popular characters.
+- Popular categories.
+- Anonymous submissions.
+- New registrations.
+- Community engagement.
+- Music usage where appropriate.
+
+Performance:
+
+- Lazy-load images.
+- Compress uploaded images.
+- Paginate character listings.
+- Avoid excessive Firestore reads.
+- Optimize real-time subscriptions.
+- Load audio only when needed.
+- Cache suitable public data.
+- Use responsive image sizes.
+- Avoid unnecessary animation rendering.
+
+Accessibility:
+
+- Keyboard navigation.
+- Visible focus states.
+- Readable color contrast.
+- Proper labels.
+- Mobile-friendly controls.
+- Reduced-motion support.
+
+---
+
+# 19. RESPONSIVE DESIGN
+
+Desktop:
+
+- Three-column homepage.
+- Spacious character cards.
+- Floating music player.
+- Full admin dashboard.
+
+Tablet:
+
+- Two-column or rearranged layout.
+- Compact navigation.
+- Adapted card sizes.
+
+Mobile:
+
+- Single-column content.
+- Collapsible navigation.
+- Bottom navigation or compact menu.
+- Floating music player that does not cover content.
+- Touch-friendly buttons.
+- Responsive messenger.
+
+All pages must remain usable on small screens.
+
+---
+
+# 20. TECHNICAL PROJECT STRUCTURE
+
+Suggested structure:
+
+```text
+app/
+  page.tsx
+  entrance/
+  admin/
+  characters/
+  weekly-ranking/
+  random-husband/
+  entertainment/
+  music/
+  inbox/
+  community/
+  messenger/
+  profile/
+
+components/
+  layout/
+  navigation/
+  classroom/
+  mascot/
+  characters/
+  ranking/
+  music/
+  entertainment/
+  community/
+  messenger/
+  admin/
+  animations/
+
+lib/
+  firebase/
+  auth/
+  security/
+  utils/
+
+services/
+  characters/
+  votes/
+  ranking/
+  messages/
+  music/
+  notifications/
+
+types/
+config/
+public/
+  images/
+  mascot/
+  decorations/
+  audio/
+styles/
+```
+
+---
+
+# 21. IMPLEMENTATION PHASES
+
+Build the project in clear phases while maintaining a consistent design system.
+
+**Phase 1 — Visual Foundation**
+
+- Design tokens.
+- Typography.
+- Entrance page.
+- Mascot.
+- Animated background.
+- Homepage three-column layout.
+- Responsive navigation.
+
+**Phase 2 — Firebase and Character Library**
+
+- Firebase setup.
+- Authentication.
+- Character database.
+- Character detail pages.
+- Admin CRUD.
+- Image uploads.
+
+**Phase 3 — Ranking and Random Character**
+
+- Likes.
+- Weekly vote validation.
+- Weekly ranking.
+- Ranking archives.
+- Random character system.
+
+**Phase 4 — Entertainment and Music**
+
+- Lucky wheel.
+- Mystery gift.
+- Quiz.
+- Stickers.
+- Music room.
+- Persistent player.
+
+**Phase 5 — Inbox and Community**
+
+- Anonymous submissions.
+- Moderation.
+- Community wall.
+- Reactions and comments.
+- Member profiles.
+
+**Phase 6 — Messenger**
+
+- Direct messages available immediately after registration.
+- Group chats.
+- Friend system.
+- Notifications.
+
+**Phase 7 — Admin, Security and Optimization**
+
+- Full admin dashboard.
+- Analytics.
+- Moderation tools.
+- Activity logs.
+- Backup and restore.
+- Security rules.
+- Performance optimization.
+- Testing and deployment.
+
+---
+
+# 22. IMPORTANT DEVELOPMENT REQUIREMENTS
+
+1. Build a fully functional website, not just a static visual mockup.
+2. Preserve the pastel kindergarten identity across all pages.
+3. Follow the three-column homepage composition described above.
+4. Make the entrance animation and homepage visually immersive.
+5. All important buttons must perform their actual advertised actions.
+6. Do not create fake data persistence or pretend that uploads have been saved.
+7. Connect real Firebase services for authentication, storage, and database operations.
+8. If Firebase configuration is unavailable, provide a clear setup guide and mark unfinished integrations honestly.
+9. Include Firestore indexes, security rules, environment variable examples, and deployment instructions.
+10. Test critical operations such as admin authorization, character CRUD, vote validation, message access, and file uploads.
+11. Keep the code modular and maintainable.
+12. Ensure the website works on desktop, tablet, and mobile.
+13. Prioritize a beautiful, polished user experience without sacrificing functionality.
+
+**FINAL DESIGN GOAL:**
+
+Mầm Non Rắn Con should feel like a magical pastel kindergarten where every character is a little student, every creator has a classroom corner, every announcement is pinned to a bulletin board, and every visitor can explore, play, listen to music, and interact with the community.
+
+The layout should be inspired by the provided Meimei Corner screenshots, but the colors, illustrations, mascot, content, and overall identity must be original to Mầm Non Rắn Con.

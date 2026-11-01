@@ -1,0 +1,242 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-bg-lavender: #EFE8FA;
+    --color-bg-rose: #FDE8F1;
+    --color-bg-champagne: #FEF6E8;
+    --color-text-main: #4E4059;
+    --color-text-muted: #827290;
+    --color-accent-purple: #9078B4;
+    --color-accent-rose: #E2799F;
+    --color-border-glass: rgba(255, 255, 255, 0.65);
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', 'Be Vietnam Pro', sans-serif;
+    color: var(--color-text-main);
+    background: linear-gradient(135deg, #EFE8FA 0%, #FDE8F1 50%, #FEF6E8 100%);
+    background-size: 200% 200%;
+    animation: luxuryAuroraFlow 20s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-heading {
+    font-family: 'Playfair Display', 'Lora', Georgia, serif;
+    letter-spacing: -0.01em;
+  }
+
+  .font-playfair {
+    font-family: 'Playfair Display', 'Lora', Georgia, serif;
+  }
+
+  .font-cinzel {
+    font-family: 'Playfair Display', 'Lora', Georgia, serif;
+  }
+
+  .font-editorial {
+    font-family: 'Playfair Display', 'Lora', Georgia, serif;
+  }
+
+  .font-luxury {
+    font-family: 'Cormorant Garamond', Garamond, Georgia, serif;
+  }
+
+  .font-caption {
+    font-family: 'Comfortaa', cursive, sans-serif;
+  }
+}
+
+/* Fluid Ultra-Smooth Animated Aurora Gradient */
+@keyframes luxuryAuroraFlow {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 100%;
+  }
+}
+
+@keyframes orbFloatSlow {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(45px, -35px) scale(1.08);
+  }
+  66% {
+    transform: translate(-30px, 25px) scale(0.95);
+  }
+}
+
+@keyframes shimmerGlow {
+  0%, 100% {
+    opacity: 0.5;
+    box-shadow: 0 8px 32px 0 rgba(144, 120, 180, 0.1);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 12px 40px 0 rgba(226, 121, 159, 0.18);
+  }
+}
+
+@keyframes tickerMarquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-aurora-orb {
+  animation: orbFloatSlow 18s ease-in-out infinite;
+}
+
+.animate-shimmer-glow {
+  animation: shimmerGlow 4s ease-in-out infinite;
+}
+
+.animate-marquee {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: tickerMarquee 28s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Luxurious Frosted Glassmorphic Surfaces (Ultra Crystal Translucent) */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.54);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  box-shadow: 0 12px 35px -8px rgba(120, 95, 155, 0.06), 0 4px 12px -2px rgba(226, 121, 159, 0.04);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-panel-hover:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 18px 42px -6px rgba(120, 95, 155, 0.10), 0 8px 18px -4px rgba(226, 121, 159, 0.08);
+  border-color: rgba(255, 255, 255, 0.85);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.glass-card-tag {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Luxury Ethereal Notes */
+.note-lavender {
+  background: rgba(243, 238, 253, 0.85);
+  border: 1px solid rgba(220, 205, 248, 0.6);
+  backdrop-filter: blur(10px);
+}
+.note-rose {
+  background: rgba(254, 238, 245, 0.85);
+  border: 1px solid rgba(248, 207, 226, 0.6);
+  backdrop-filter: blur(10px);
+}
+.note-champagne {
+  background: rgba(254, 248, 235, 0.85);
+  border: 1px solid rgba(250, 233, 201, 0.6);
+  backdrop-filter: blur(10px);
+}
+.note-cyan {
+  background: rgba(238, 248, 254, 0.85);
+  border: 1px solid rgba(206, 236, 252, 0.6);
+  backdrop-filter: blur(10px);
+}
+.note-mint {
+  background: rgba(238, 252, 245, 0.85);
+  border: 1px solid rgba(204, 246, 225, 0.6);
+  backdrop-filter: blur(10px);
+}
+
+/* Refined custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(144, 120, 180, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(144, 120, 180, 0.45);
+}
+
+/* Snowfall Animation */
+.snowflake {
+  position: fixed;
+  top: -10%;
+  z-index: -1;
+  user-select: none;
+  cursor: default;
+  animation: snowfall linear infinite;
+}
+
+@keyframes snowfall {
+  0% {
+    top: -10%;
+    transform: translateX(0) rotate(0deg);
+  }
+  100% {
+    top: 100%;
+    transform: translateX(100px) rotate(360deg);
+  }
+}
+
+.snowflake:nth-child(2n) {
+  animation-duration: 10s;
+  animation-delay: 1s;
+}
+.snowflake:nth-child(3n) {
+  animation-duration: 15s;
+  animation-delay: 2s;
+}
+.snowflake:nth-child(4n) {
+  animation-duration: 7s;
+  animation-delay: 0s;
+}
+.snowflake:nth-child(5n) {
+  animation-duration: 12s;
+  animation-delay: 3s;
+}
+.snowflake:nth-child(1) { left: 5%; animation-duration: 14s; }
+.snowflake:nth-child(2) { left: 15%; animation-duration: 11s; }
+.snowflake:nth-child(3) { left: 25%; animation-duration: 16s; }
+.snowflake:nth-child(4) { left: 35%; animation-duration: 10s; }
+.snowflake:nth-child(5) { left: 45%; animation-duration: 18s; }
+.snowflake:nth-child(6) { left: 55%; animation-duration: 13s; }
+.snowflake:nth-child(7) { left: 65%; animation-duration: 15s; }
+.snowflake:nth-child(8) { left: 75%; animation-duration: 12s; }
+.snowflake:nth-child(9) { left: 85%; animation-duration: 17s; }
+.snowflake:nth-child(10) { left: 95%; animation-duration: 14s; }
+.snowflake:nth-child(11) { left: 10%; animation-duration: 15s; }
+.snowflake:nth-child(12) { left: 20%; animation-duration: 12s; }
+.snowflake:nth-child(13) { left: 30%; animation-duration: 18s; }
+.snowflake:nth-child(14) { left: 40%; animation-duration: 14s; }
+.snowflake:nth-child(15) { left: 50%; animation-duration: 16s; }
+.snowflake:nth-child(16) { left: 60%; animation-duration: 13s; }
+.snowflake:nth-child(17) { left: 70%; animation-duration: 15s; }
+.snowflake:nth-child(18) { left: 80%; animation-duration: 11s; }
+.snowflake:nth-child(19) { left: 90%; animation-duration: 17s; }
+.snowflake:nth-child(20) { left: 5%; animation-duration: 14s; }
