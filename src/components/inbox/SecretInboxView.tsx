@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Mail, 
   Send, 
@@ -7,8 +7,6 @@ import {
   ShieldCheck, 
   Trash2,
   Lock,
-  Eye,
-  EyeOff,
   Image as ImageIcon,
   X as XIcon
 } from 'lucide-react';
@@ -25,8 +23,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import confetti from 'canvas-confetti';
-import { AnonymousMessage } from '../../types';
-import { INITIAL_ANONYMOUS_MESSAGES } from '../../lib/initialData';
+import { AnonymousMessage, MessageReply } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { soundManager } from '../../lib/sound';
 import { compressImageFile } from '../../lib/imageCompressor';
@@ -75,13 +72,14 @@ export const SecretInboxView: React.FC = () => {
     });
 
     const newMsg: Omit<AnonymousMessage, 'id'> = {
-      authorId: profile?.uid || 'guest-anon',
+      authorId: profile?.uid || currentUser?.uid || 'guest-anon',
       nickname: nickname.trim() || profile?.displayName || 'Một chiếc bé giấu tên',
       message: messageText.trim(),
       imageUrl: imageAttachment || undefined,
       status: 'approved',
       isPinned: false,
       isConfidential: isConfidential,
+      replies: [],
       createdAt: new Date().toISOString()
     };
 
@@ -121,18 +119,48 @@ export const SecretInboxView: React.FC = () => {
 
   const handleSendReply = async (id: string) => {
     const replyText = replyInput[id]?.trim();
-    if (!replyText || !isAdmin) return;
+    if (!replyText) return;
     soundManager.playMagicChime();
 
+    const msg = messages.find((m: AnonymousMessage) => m.id === id);
+    if (!msg) return;
+
+    const currentUid = profile?.uid || currentUser?.uid || 'guest';
+    const isUserAdmin = isAdmin;
+
+    const newReply: MessageReply = {
+      id: `rep-${Date.now()}`,
+      senderId: currentUid,
+      senderName: isUserAdmin ? 'Cô Giáo Admin' : (profile?.displayName || msg.nickname || 'Bé Mầm Non'),
+      senderAvatar: profile?.photoURL || currentUser?.photoURL || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
+      content: replyText,
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedReplies = [...(msg.replies || []), newReply];
+
     try {
-      await updateDoc(doc(db, 'anonymousMessages', id), { reply: replyText });
+      await updateDoc(doc(db, 'anonymousMessages', id), { 
+        replies: updatedReplies,
+        reply: replyText // legacy sync
+      });
       setReplyInput((prev: { [id: string]: string }) => ({ ...prev, [id]: '' }));
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `anonymousMessages/${id}`);
     }
   };
 
-  const approvedMessages = messages.filter((m: AnonymousMessage) => isAdmin || m.status === 'approved');
+  // Visibility rule: 
+  // - Admin sees all messages.
+  // - Confidential messages are visible ONLY to Admin and the Author (msg.authorId === profile?.uid).
+  // - Public messages are visible to everyone.
+  const visibleMessages = messages.filter((m: AnonymousMessage) => {
+    if (isAdmin) return true;
+    if (m.isConfidential) {
+      return m.authorId && profile?.uid && m.authorId === profile.uid;
+    }
+    return m.status === 'approved';
+  });
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -149,7 +177,7 @@ export const SecretInboxView: React.FC = () => {
             Hòm Thư Bí Mật ♡
           </h1>
           <p className="text-xs md:text-sm text-[#7A6C88] font-luxury italic tracking-wide">
-            Nơi gửi gắm những lời tỏ tình, câu hỏi hay thư tâm sự chỉ duy nhất bạn và Cô Giáo Admin đọc được!
+            Thư gửi chế độ bí mật chỉ duy nhất bạn và Cô Giáo Admin đọc được và trò chuyện 2 chiều!
           </p>
         </div>
 
@@ -231,8 +259,8 @@ export const SecretInboxView: React.FC = () => {
                 className="w-5 h-5 rounded-md accent-[#8E75B2] cursor-pointer"
               />
               <label htmlFor="confidential-check" className="flex flex-col cursor-pointer">
-                <span className="text-xs text-[#4A3C56] font-bold tracking-wide uppercase">🔒 Chế độ bí mật</span>
-                <span className="text-[10px] text-[#827290] font-luxury italic">Chỉ mình bạn & Cô Giáo đọc được nội dung</span>
+                <span className="text-xs text-[#4A3C56] font-bold tracking-wide uppercase">🔒 Chế độ bí mật (Riêng tư với Admin)</span>
+                <span className="text-[10px] text-[#827290] font-luxury italic">Chỉ mình bạn & Cô Giáo Admin đọc và phản hồi</span>
               </label>
             </div>
 
@@ -279,7 +307,7 @@ export const SecretInboxView: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4 border-t border-black/5">
             <div className="flex items-center gap-2 text-[10px] text-[#827290] font-luxury italic tracking-wide">
               <ShieldCheck className="w-4 h-4 text-[#8E75B2] opacity-60" />
-              <span>Dữ liệu của bạn được mã hóa & bảo mật tuyệt đối tại AI Studio Boutique.</span>
+              <span>Thư gửi riêng tư được mã hóa & chỉ hiển thị cho bạn và Admin.</span>
             </div>
 
             <button
@@ -298,34 +326,34 @@ export const SecretInboxView: React.FC = () => {
               className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl text-[11px] font-bold text-center flex items-center justify-center gap-2"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Phong thư mộng mơ đã được bỏ vào hòm thư thành công! Cô giáo sẽ hồi đáp sớm nhất nhé ♡</span>
+              <span>Phong thư mộng mơ đã được gửi đến Cô Giáo Admin! Bạn có thể theo dõi phản hồi tại đây nhé ♡</span>
             </motion.div>
           )}
         </form>
       </div>
 
-      {/* Public / Confidential Letter Wall */}
+      {/* Letter Wall / Storage */}
       <div className="space-y-6">
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" />
             <h3 className="font-luxury font-[200] text-2xl text-[#3F334D] tracking-wider uppercase">
-              Lưu trữ tâm sự ({approvedMessages.length})
+              Hòm thư của bạn ({visibleMessages.length})
             </h3>
           </div>
           {isAdmin && (
             <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-[#EAE2F8] to-[#FFF0F5] text-[#3F334D] font-bold px-4 py-1.5 rounded-full border border-white text-[10px] shadow-sm tracking-wider">
               <ShieldCheck className="w-3.5 h-3.5 text-[#8E75B2]" />
-              <span>CO GIAO ADMIN PRIVILEGES</span>
+              <span>QUẢN TRỊ VIÊN (ADMIN VIEW)</span>
             </div>
           )}
         </div>
 
         {/* Letters Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {approvedMessages.map((msg: AnonymousMessage) => {
-            const isOwner = msg.authorId === profile?.uid;
-            const canRead = !msg.isConfidential || isOwner || isAdmin;
+          {visibleMessages.map((msg: AnonymousMessage) => {
+            const isOwner = msg.authorId === profile?.uid || msg.authorId === currentUser?.uid;
+            const canParticipate = isAdmin || isOwner;
 
             return (
               <motion.div
@@ -344,7 +372,7 @@ export const SecretInboxView: React.FC = () => {
                       <strong className="text-[#3F334D] font-luxury font-[300] tracking-widest uppercase text-xs">{msg.nickname}</strong>
                       {msg.isConfidential && (
                         <span className="bg-purple-100/80 text-purple-700 font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-purple-200">
-                          <Lock className="w-2.5 h-2.5" /> SECRECY
+                          <Lock className="w-2.5 h-2.5" /> RIÊNG TƯ
                         </span>
                       )}
                     </div>
@@ -358,7 +386,7 @@ export const SecretInboxView: React.FC = () => {
                     </div>
                   </div>
 
-                  {canRead && msg.imageUrl && (
+                  {msg.imageUrl && (
                     <img 
                       src={msg.imageUrl} 
                       className="w-full max-h-72 object-cover rounded-3xl mb-5 border-[3px] border-white shadow-md hover:scale-[1.01] transition-transform" 
@@ -366,31 +394,46 @@ export const SecretInboxView: React.FC = () => {
                     />
                   )}
 
-                  {canRead ? (
-                    <p className="text-xs md:text-sm text-[#4A3B53] leading-relaxed mb-6 italic font-luxury tracking-wide">
-                      "{msg.message}"
-                    </p>
-                  ) : (
-                    <div className="p-6 rounded-3xl bg-purple-50/40 border border-purple-100 text-center my-4 backdrop-blur-sm">
-                      <div className="w-12 h-12 rounded-full bg-white/80 mx-auto mb-3 flex items-center justify-center border border-purple-100 shadow-inner">
-                        <Lock className="w-5 h-5 text-[#8E75B2]" />
-                      </div>
-                      <p className="text-xs text-[#6D5E7B] font-bold tracking-widest uppercase">
-                        Thư tâm sự bí mật
-                      </p>
-                      <p className="text-[10px] text-[#827290] italic mt-1 px-4 leading-relaxed">
-                        Chỉ duy nhất tác giả và Cô Giáo Admin mới có chìa khóa để mở phong thư này.
-                      </p>
+                  <p className="text-xs md:text-sm text-[#4A3B53] leading-relaxed mb-6 italic font-luxury tracking-wide">
+                    "{msg.message}"
+                  </p>
+
+                  {/* Conversation Replies Thread */}
+                  {msg.replies && msg.replies.length > 0 && (
+                    <div className="space-y-3 mb-5">
+                      {msg.replies.map((rep: MessageReply) => {
+                        const isRepByAdmin = rep.senderName.includes('Admin') || rep.senderName.includes('Cô Giáo');
+                        return (
+                          <div 
+                            key={rep.id} 
+                            className={`p-4 rounded-3xl border text-xs space-y-1 ${
+                              isRepByAdmin 
+                                ? 'bg-gradient-to-br from-[#FEF8ED] via-[#FFF4F8] to-[#F6EDFC] border-pink-200/60 shadow-inner-sm ml-2' 
+                                : 'bg-white/90 border-purple-100 mr-2'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between text-[10px] font-bold text-[#8E75B2]">
+                              <span className="flex items-center gap-1.5">
+                                <img src={rep.senderAvatar} alt="" className="w-4 h-4 rounded-full object-cover" />
+                                <span>{rep.senderName}</span>
+                              </span>
+                              <span className="text-[9px] text-gray-400 font-normal">
+                                {new Date(rep.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-[#4A3B53] leading-relaxed font-luxury pl-5">
+                              {rep.content}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
-                  {msg.reply && canRead && (
-                    <div className="p-5 rounded-3xl bg-gradient-to-br from-[#FEF8ED] via-[#FFF4F8] to-[#F6EDFC] border border-white shadow-inner-sm mb-4 relative overflow-hidden group/reply">
-                      <div className="absolute top-0 right-0 p-2 opacity-10 group-hover/reply:opacity-20 transition-opacity">
-                        <Sparkles className="w-8 h-8 text-[#8E75B2]" />
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#8E75B2] mb-2 font-caption uppercase tracking-[0.2em]">
-                        <div className="w-1 h-1 rounded-full bg-[#8E75B2]" />
+                  {/* Legacy Single Reply Fallback */}
+                  {(!msg.replies || msg.replies.length === 0) && msg.reply && (
+                    <div className="p-4 rounded-3xl bg-gradient-to-br from-[#FEF8ED] via-[#FFF4F8] to-[#F6EDFC] border border-white shadow-inner-sm mb-4 relative overflow-hidden">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#8E75B2] mb-1 font-caption uppercase tracking-[0.2em]">
                         <span>Lời hồi đáp từ Cô Giáo:</span>
                       </div>
                       <p className="text-xs text-[#4A3B53] leading-relaxed font-luxury">
@@ -400,13 +443,14 @@ export const SecretInboxView: React.FC = () => {
                   )}
                 </div>
 
-                {isAdmin && (
-                  <div className="pt-4 border-t border-black/5 flex flex-col gap-3 mt-2">
-                    <div className="flex items-center justify-between">
+                {/* Two-Way Reply Input & Admin Tools */}
+                <div className="pt-4 border-t border-black/5 flex flex-col gap-3 mt-2">
+                  {isAdmin && (
+                    <div className="flex items-center justify-between pb-1">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleTogglePin(msg.id)}
-                          className="text-[9px] font-bold px-3 py-1.5 rounded-full bg-white/80 hover:bg-white text-[#3F334D] border border-black/5 shadow-2xs tracking-widest uppercase"
+                          className="text-[9px] font-bold px-3 py-1.5 rounded-full bg-white/80 hover:bg-white text-[#3F334D] border border-black/5 shadow-2xs tracking-widest uppercase cursor-pointer"
                         >
                           {msg.isPinned ? 'Bỏ ghim' : 'Ghim thư'}
                         </button>
@@ -419,26 +463,28 @@ export const SecretInboxView: React.FC = () => {
                         </button>
                       </div>
                     </div>
+                  )}
 
+                  {canParticipate && (
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="Cô giáo viết lời hồi đáp..."
+                        placeholder={isAdmin ? "Cô giáo viết lời hồi đáp..." : "Nhập phản hồi gửi Cô giáo..."}
                         value={replyInput[msg.id] || ''}
                         onChange={(e) =>
                           setReplyInput((prev: { [id: string]: string }) => ({ ...prev, [msg.id]: e.target.value }))
                         }
-                        className="flex-1 px-4 py-2 rounded-2xl bg-white/80 border border-white text-xs text-[#3F334D] focus:outline-none focus:ring-2 focus:ring-[#8E75B2]/20"
+                        className="flex-1 px-4 py-2 rounded-2xl bg-white/90 border border-[#D2C8F2] text-xs text-[#3F334D] focus:outline-none focus:ring-2 focus:ring-[#8E75B2]/20"
                       />
                       <button
                         onClick={() => handleSendReply(msg.id)}
-                        className="px-5 py-2 rounded-2xl bg-[#9078B4] text-white text-[10px] font-bold hover:bg-[#7E66A2] cursor-pointer shadow-md tracking-wider uppercase"
+                        className="px-5 py-2 rounded-2xl bg-[#9078B4] text-white text-[10px] font-bold hover:bg-[#7E66A2] cursor-pointer shadow-md tracking-wider uppercase shrink-0"
                       >
-                        Hồi đáp
+                        {isAdmin ? 'Hồi đáp' : 'Gửi trả lời'}
                       </button>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </motion.div>
             );
           })}

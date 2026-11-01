@@ -74,6 +74,15 @@ export interface CommunityReply {
   createdAt: string;
 }
 
+export interface MessageReply {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface AnonymousMessage {
   id: string;
   authorId?: string;
@@ -84,6 +93,7 @@ export interface AnonymousMessage {
   isPinned?: boolean;
   isConfidential?: boolean;
   reply?: string;
+  replies?: MessageReply[];
   createdAt: string;
 }
 
